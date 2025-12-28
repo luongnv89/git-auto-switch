@@ -107,6 +107,15 @@ prompt_account_info() {
     read -rp "Account name: " name
   done
 
+  # Ask for workspace first so we can use it for SSH key default path
+  local default_workspace="$HOME/workspace/$name"
+  read -rp "Workspace folder [$default_workspace]: " workspace
+  workspace="${workspace:-$default_workspace}"
+
+  # Expand workspace path for use in default key path
+  local expanded_workspace
+  expanded_workspace=$(expand_path "$workspace")
+
   local default_alias="gh-$name"
   read -rp "SSH alias [$default_alias]: " ssh_alias
   ssh_alias="${ssh_alias:-$default_alias}"
@@ -115,15 +124,10 @@ prompt_account_info() {
     read -rp "SSH alias: " ssh_alias
   done
 
-  local default_key="$HOME/.ssh/id_ed25519_$name"
+  # Default SSH key path inside workspace/.ssh folder
+  local default_key="$workspace/.ssh/id_ed25519"
   read -rp "SSH key path [$default_key]: " ssh_key_path
   ssh_key_path="${ssh_key_path:-$default_key}"
-
-  read -rp "Workspace folder (e.g., ~/workspace/$name): " workspace
-  while [[ -z "$workspace" ]]; do
-    log_warn "Workspace is required."
-    read -rp "Workspace folder: " workspace
-  done
 
   read -rp "Git user.name: " git_name
   while [[ -z "$git_name" ]]; do
