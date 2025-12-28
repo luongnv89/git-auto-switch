@@ -128,12 +128,14 @@ validate_state() {
     fi
 
     # Check for duplicates
-    for seen_id in "${seen_ids[@]}"; do
-      if [[ "$seen_id" == "$id" ]]; then
-        log_error "Duplicate account ID: $id"
-        ((errors++))
-      fi
-    done
+    if [[ ${#seen_ids[@]} -gt 0 ]]; then
+      for seen_id in "${seen_ids[@]}"; do
+        if [[ "$seen_id" == "$id" ]]; then
+          log_error "Duplicate account ID: $id"
+          ((errors++))
+        fi
+      done
+    fi
     seen_ids+=("$id")
 
     # Check each workspace in the account
@@ -141,29 +143,33 @@ validate_state() {
       local workspace
       workspace=$(echo "$account" | jq -r ".workspaces[$j]")
 
-      for seen_ws in "${seen_workspaces[@]}"; do
-        if [[ "$seen_ws" == "$workspace" ]]; then
-          log_error "Duplicate workspace: $workspace"
-          ((errors++))
-        fi
-        # Check for overlapping workspaces (one inside another)
-        local expanded_ws expanded_seen_ws
-        expanded_ws=$(expand_path "$workspace")
-        expanded_seen_ws=$(expand_path "$seen_ws")
-        if [[ "${expanded_ws}/" == "${expanded_seen_ws}/"* ]] || [[ "${expanded_seen_ws}/" == "${expanded_ws}/"* ]]; then
-          log_error "Overlapping workspaces: $workspace and $seen_ws"
-          ((errors++))
-        fi
-      done
+      if [[ ${#seen_workspaces[@]} -gt 0 ]]; then
+        for seen_ws in "${seen_workspaces[@]}"; do
+          if [[ "$seen_ws" == "$workspace" ]]; then
+            log_error "Duplicate workspace: $workspace"
+            ((errors++))
+          fi
+          # Check for overlapping workspaces (one inside another)
+          local expanded_ws expanded_seen_ws
+          expanded_ws=$(expand_path "$workspace")
+          expanded_seen_ws=$(expand_path "$seen_ws")
+          if [[ "${expanded_ws}/" == "${expanded_seen_ws}/"* ]] || [[ "${expanded_seen_ws}/" == "${expanded_ws}/"* ]]; then
+            log_error "Overlapping workspaces: $workspace and $seen_ws"
+            ((errors++))
+          fi
+        done
+      fi
       seen_workspaces+=("$workspace")
     done
 
-    for seen_alias in "${seen_aliases[@]}"; do
-      if [[ "$seen_alias" == "$ssh_alias" ]]; then
-        log_error "Duplicate SSH alias: $ssh_alias"
-        ((errors++))
-      fi
-    done
+    if [[ ${#seen_aliases[@]} -gt 0 ]]; then
+      for seen_alias in "${seen_aliases[@]}"; do
+        if [[ "$seen_alias" == "$ssh_alias" ]]; then
+          log_error "Duplicate SSH alias: $ssh_alias"
+          ((errors++))
+        fi
+      done
+    fi
     seen_aliases+=("$ssh_alias")
   done
 
