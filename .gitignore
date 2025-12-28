@@ -20,3 +20,4 @@ test/tmp/
 # Environment
 .env
 .env.local
+CLAUDE.md
