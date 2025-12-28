@@ -2,6 +2,11 @@
 # Audit repositories for identity issues
 
 cmd_audit() {
+  local fix_mode=false
+  if [[ "${1:-}" == "--fix" || "${1:-}" == "-f" ]]; then
+    fix_mode=true
+  fi
+
   # Check if initialized
   if ! load_state; then
     die "Not initialized. Run 'git-auto-switch init' first."
@@ -99,7 +104,7 @@ cmd_audit() {
           fi
         fi
 
-        # Report issues
+        # Report and optionally fix issues
         if [[ "$email_ok" == false || "$remote_ok" == false ]]; then
           ((issues++))
           echo
@@ -109,12 +114,22 @@ cmd_audit() {
             echo "  Email:"
             echo "    Expected: $git_email"
             echo "    Actual:   ${repo_email:-<not set>}"
+            if [[ "$fix_mode" == true ]]; then
+              # Remove local user.email to let includeIf take over
+              git config --unset user.email 2>/dev/null || true
+              log_success "  Fixed: Removed local user.email (will use global includeIf)"
+            fi
           fi
 
           if [[ "$remote_ok" == false ]]; then
             echo "  Remote:"
             echo "    Expected alias: $ssh_alias"
             echo "    Actual URL:     $origin_url"
+            if [[ "$fix_mode" == true ]]; then
+              # Rewrite remote to use SSH alias
+              rewrite_repo_remotes "$repo" "$ssh_alias"
+              log_success "  Fixed: Rewrote remote to use $ssh_alias"
+            fi
           fi
         fi
 
@@ -133,8 +148,12 @@ cmd_audit() {
 
   if [[ $issues -gt 0 ]]; then
     echo
-    echo "To fix issues, run:"
-    echo "  git-auto-switch apply"
+    if [[ "$fix_mode" == true ]]; then
+      log_success "Fixed $issues issue(s)"
+    else
+      echo "To fix issues, run:"
+      echo "  git-auto-switch audit --fix"
+    fi
     return 1
   else
     log_success "All repositories are correctly configured!"

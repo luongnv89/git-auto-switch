@@ -20,7 +20,7 @@ COMMANDS:
   list        List all configured accounts
   apply       Apply configuration to system (SSH, Git, hooks)
   validate    Validate configuration and check for issues
-  audit       Audit repositories for identity mismatches
+  audit       Audit repositories for identity mismatches (--fix to auto-fix)
   help        Show this help message
   version     Show version information
 
@@ -45,6 +45,9 @@ EXAMPLES:
 
   # Audit repositories
   git-auto-switch audit
+
+  # Audit and fix issues
+  git-auto-switch audit --fix
 
 CONFIG FILE:
   $CONFIG_FILE
