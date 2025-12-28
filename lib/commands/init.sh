@@ -56,7 +56,7 @@ cmd_init() {
     if prompt_account_info; then
       # Add account to state and save immediately
       add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
-        "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
+        "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACES_JSON" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
       save_state
       break
     else
@@ -82,7 +82,7 @@ cmd_init() {
     if prompt_account_info; then
       # Add account to state and save immediately
       add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
-        "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
+        "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACES_JSON" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
       save_state
     fi
     # If aborted, just continue the loop (user can add another or exit)

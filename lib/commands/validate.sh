@@ -41,12 +41,11 @@ cmd_validate() {
     local account
     account=$(get_account_by_index "$i")
 
-    local id name ssh_alias ssh_key_path workspace
+    local id name ssh_alias ssh_key_path
     id=$(echo "$account" | jq -r '.id')
     name=$(echo "$account" | jq -r '.name')
     ssh_alias=$(echo "$account" | jq -r '.ssh_alias')
     ssh_key_path=$(echo "$account" | jq -r '.ssh_key_path')
-    workspace=$(echo "$account" | jq -r '.workspace')
 
     echo
     log_info "Validating account: $name ($id)"
@@ -78,23 +77,31 @@ cmd_validate() {
       ((errors++))
     fi
 
-    # Check workspace directory
-    local expanded_workspace
-    expanded_workspace=$(expand_path "$workspace")
-    if [[ -d "$expanded_workspace" ]]; then
-      log_success "Workspace exists: $expanded_workspace"
-    else
-      log_warn "Workspace does not exist: $expanded_workspace"
-      ((warnings++))
-    fi
+    # Check all workspaces for this account
+    local workspaces_count
+    workspaces_count=$(echo "$account" | jq '.workspaces | length')
+    for ((j=0; j<workspaces_count; j++)); do
+      local workspace
+      workspace=$(echo "$account" | jq -r ".workspaces[$j]")
 
-    # Check includeIf entry
-    if grep -q "gitdir:${expanded_workspace}/" "$GIT_CONFIG" 2>/dev/null; then
-      log_success "Git includeIf entry exists for $workspace"
-    else
-      log_error "Git includeIf entry missing for $workspace"
-      ((errors++))
-    fi
+      # Check workspace directory
+      local expanded_workspace
+      expanded_workspace=$(expand_path "$workspace")
+      if [[ -d "$expanded_workspace" ]]; then
+        log_success "Workspace exists: $expanded_workspace"
+      else
+        log_warn "Workspace does not exist: $expanded_workspace"
+        ((warnings++))
+      fi
+
+      # Check includeIf entry
+      if grep -q "gitdir:${expanded_workspace}/" "$GIT_CONFIG" 2>/dev/null; then
+        log_success "Git includeIf entry exists for $workspace"
+      else
+        log_error "Git includeIf entry missing for $workspace"
+        ((errors++))
+      fi
+    done
 
     # Test SSH connection (optional, network dependent)
     read -rp "  Test SSH connection for $name? [y/N] " test_ssh

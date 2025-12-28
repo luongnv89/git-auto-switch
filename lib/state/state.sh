@@ -89,11 +89,10 @@ validate_state() {
     local account
     account=$(echo "$STATE_JSON" | jq ".accounts[$i]")
 
-    local id name ssh_alias workspace git_email
+    local id name ssh_alias git_email
     id=$(echo "$account" | jq -r '.id // empty')
     name=$(echo "$account" | jq -r '.name // empty')
     ssh_alias=$(echo "$account" | jq -r '.ssh_alias // empty')
-    workspace=$(echo "$account" | jq -r '.workspace // empty')
     git_email=$(echo "$account" | jq -r '.git_email // empty')
 
     # Required fields
@@ -112,8 +111,11 @@ validate_state() {
       ((errors++))
     fi
 
-    if [[ -z "$workspace" ]]; then
-      log_error "Account '$id' missing 'workspace' field"
+    # Check workspaces array
+    local workspaces_count
+    workspaces_count=$(echo "$account" | jq '.workspaces | length // 0')
+    if [[ $workspaces_count -eq 0 ]]; then
+      log_error "Account '$id' missing 'workspaces' field or empty"
       ((errors++))
     fi
 
@@ -134,21 +136,27 @@ validate_state() {
     done
     seen_ids+=("$id")
 
-    for seen_ws in "${seen_workspaces[@]}"; do
-      if [[ "$seen_ws" == "$workspace" ]]; then
-        log_error "Duplicate workspace: $workspace"
-        ((errors++))
-      fi
-      # Check for overlapping workspaces (one inside another)
-      local expanded_ws expanded_seen_ws
-      expanded_ws=$(expand_path "$workspace")
-      expanded_seen_ws=$(expand_path "$seen_ws")
-      if [[ "${expanded_ws}/" == "${expanded_seen_ws}/"* ]] || [[ "${expanded_seen_ws}/" == "${expanded_ws}/"* ]]; then
-        log_error "Overlapping workspaces: $workspace and $seen_ws"
-        ((errors++))
-      fi
+    # Check each workspace in the account
+    for ((j=0; j<workspaces_count; j++)); do
+      local workspace
+      workspace=$(echo "$account" | jq -r ".workspaces[$j]")
+
+      for seen_ws in "${seen_workspaces[@]}"; do
+        if [[ "$seen_ws" == "$workspace" ]]; then
+          log_error "Duplicate workspace: $workspace"
+          ((errors++))
+        fi
+        # Check for overlapping workspaces (one inside another)
+        local expanded_ws expanded_seen_ws
+        expanded_ws=$(expand_path "$workspace")
+        expanded_seen_ws=$(expand_path "$seen_ws")
+        if [[ "${expanded_ws}/" == "${expanded_seen_ws}/"* ]] || [[ "${expanded_seen_ws}/" == "${expanded_ws}/"* ]]; then
+          log_error "Overlapping workspaces: $workspace and $seen_ws"
+          ((errors++))
+        fi
+      done
+      seen_workspaces+=("$workspace")
     done
-    seen_workspaces+=("$workspace")
 
     for seen_alias in "${seen_aliases[@]}"; do
       if [[ "$seen_alias" == "$ssh_alias" ]]; then
@@ -194,10 +202,10 @@ find_account_by_workspace() {
   local expanded_repo
   expanded_repo=$(expand_path "$repo_path")
 
-  # Find account where repo_path starts with workspace
+  # Find account where repo_path starts with any of the workspaces
   echo "$STATE_JSON" | jq -r --arg repo "$expanded_repo" '
     .accounts[] |
-    select(($repo + "/") | startswith((.workspace | gsub("~"; env.HOME)) + "/"))
+    select(.workspaces[] as $ws | ($repo + "/") | startswith(($ws | gsub("~"; env.HOME)) + "/"))
   ' | head -n1
 }
 

@@ -20,7 +20,7 @@ load test_helper
   init_state
 
   add_account "work" "Work Account" "gh-work" "$HOME/.ssh/id_work" \
-    "$HOME/workspace/work" "John Work" "john@work.com"
+    '["'"$HOME"'/workspace/work"]' "John Work" "john@work.com"
 
   local account_count
   account_count=$(get_account_count)
@@ -31,6 +31,7 @@ load test_helper
   account=$(get_account "work")
   [ "$(echo "$account" | jq -r '.name')" = "Work Account" ]
   [ "$(echo "$account" | jq -r '.git_email')" = "john@work.com" ]
+  [ "$(echo "$account" | jq -r '.workspaces[0]')" = "$HOME/workspace/work" ]
 }
 
 @test "account_exists returns true for existing account" {
@@ -52,7 +53,7 @@ load test_helper
 
   # Add another account
   add_account "work" "Work" "gh-work" "$HOME/.ssh/id_work" \
-    "$HOME/workspace/work" "John Work" "john@work.com"
+    '["'"$HOME"'/workspace/work"]' "John Work" "john@work.com"
 
   local initial_count
   initial_count=$(get_account_count)
@@ -80,8 +81,8 @@ load test_helper
 
   # Manually add duplicate IDs
   STATE_JSON=$(echo "$STATE_JSON" | jq '.accounts = [
-    {"id": "dup", "name": "First", "ssh_alias": "gh-1", "workspace": "~/w1", "git_email": "a@a.com"},
-    {"id": "dup", "name": "Second", "ssh_alias": "gh-2", "workspace": "~/w2", "git_email": "b@b.com"}
+    {"id": "dup", "name": "First", "ssh_alias": "gh-1", "workspaces": ["~/w1"], "git_email": "a@a.com"},
+    {"id": "dup", "name": "Second", "ssh_alias": "gh-2", "workspaces": ["~/w2"], "git_email": "b@b.com"}
   ]')
 
   run validate_state

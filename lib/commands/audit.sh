@@ -28,89 +28,99 @@ cmd_audit() {
     local account
     account=$(get_account_by_index "$i")
 
-    local id name ssh_alias workspace git_email
+    local id name ssh_alias git_email
     id=$(echo "$account" | jq -r '.id')
     name=$(echo "$account" | jq -r '.name')
     ssh_alias=$(echo "$account" | jq -r '.ssh_alias')
-    workspace=$(echo "$account" | jq -r '.workspace')
     git_email=$(echo "$account" | jq -r '.git_email')
 
-    local expanded_workspace
-    expanded_workspace=$(expand_path "$workspace")
-
     echo
-    log_info "Auditing workspace: $name ($workspace)"
+    log_info "Auditing account: $name"
 
-    if [[ ! -d "$expanded_workspace" ]]; then
-      log_warn "Workspace directory does not exist"
-      continue
-    fi
+    # Process all workspaces for this account
+    local workspaces_count
+    workspaces_count=$(echo "$account" | jq '.workspaces | length')
 
-    # Find repositories
-    local repos
-    repos=$(find_git_repos "$workspace")
+    for ((j=0; j<workspaces_count; j++)); do
+      local workspace
+      workspace=$(echo "$account" | jq -r ".workspaces[$j]")
 
-    if [[ -z "$repos" ]]; then
-      log_info "No repositories found"
-      continue
-    fi
+      local expanded_workspace
+      expanded_workspace=$(expand_path "$workspace")
 
-    while IFS= read -r repo; do
-      ((total_repos++))
+      log_info "  Workspace: $workspace"
 
-      local current_dir
-      current_dir=$(pwd)
-
-      cd "$repo" || continue
-
-      # Check email configuration
-      local repo_email
-      repo_email=$(git config user.email 2>/dev/null || echo "")
-
-      # Check remote URL
-      local origin_url
-      origin_url=$(git remote get-url origin 2>/dev/null || echo "")
-
-      local email_ok=true
-      local remote_ok=true
-
-      # Validate email
-      if [[ -z "$repo_email" ]]; then
-        email_ok=false
-      elif [[ "$repo_email" != "$git_email" ]]; then
-        email_ok=false
+      if [[ ! -d "$expanded_workspace" ]]; then
+        log_warn "  Workspace directory does not exist"
+        continue
       fi
 
-      # Validate remote (should use SSH alias)
-      if [[ -n "$origin_url" ]]; then
-        if [[ "$origin_url" != *"$ssh_alias"* ]]; then
-          if [[ "$origin_url" == *"github.com"* ]]; then
-            remote_ok=false
+      # Find repositories
+      local repos
+      repos=$(find_git_repos "$workspace")
+
+      if [[ -z "$repos" ]]; then
+        log_info "  No repositories found"
+        continue
+      fi
+
+      while IFS= read -r repo; do
+        ((total_repos++))
+
+        local current_dir
+        current_dir=$(pwd)
+
+        cd "$repo" || continue
+
+        # Check email configuration
+        local repo_email
+        repo_email=$(git config user.email 2>/dev/null || echo "")
+
+        # Check remote URL
+        local origin_url
+        origin_url=$(git remote get-url origin 2>/dev/null || echo "")
+
+        local email_ok=true
+        local remote_ok=true
+
+        # Validate email
+        if [[ -z "$repo_email" ]]; then
+          email_ok=false
+        elif [[ "$repo_email" != "$git_email" ]]; then
+          email_ok=false
+        fi
+
+        # Validate remote (should use SSH alias)
+        if [[ -n "$origin_url" ]]; then
+          if [[ "$origin_url" != *"$ssh_alias"* ]]; then
+            if [[ "$origin_url" == *"github.com"* ]]; then
+              remote_ok=false
+            fi
           fi
         fi
-      fi
 
-      # Report issues
-      if [[ "$email_ok" == false || "$remote_ok" == false ]]; then
-        ((issues++))
-        echo
-        log_warn "Issues in: $repo"
+        # Report issues
+        if [[ "$email_ok" == false || "$remote_ok" == false ]]; then
+          ((issues++))
+          echo
+          log_warn "Issues in: $repo"
 
-        if [[ "$email_ok" == false ]]; then
-          echo "  Email:"
-          echo "    Expected: $git_email"
-          echo "    Actual:   ${repo_email:-<not set>}"
+          if [[ "$email_ok" == false ]]; then
+            echo "  Email:"
+            echo "    Expected: $git_email"
+            echo "    Actual:   ${repo_email:-<not set>}"
+          fi
+
+          if [[ "$remote_ok" == false ]]; then
+            echo "  Remote:"
+            echo "    Expected alias: $ssh_alias"
+            echo "    Actual URL:     $origin_url"
+          fi
         fi
 
-        if [[ "$remote_ok" == false ]]; then
-          echo "  Remote:"
-          echo "    Expected alias: $ssh_alias"
-          echo "    Actual URL:     $origin_url"
-        fi
-      fi
-
-      cd "$current_dir" || exit 1
-    done <<< "$repos"
+        cd "$current_dir" || exit 1
+      done <<< "$repos"
+    done
   done
 
   # Summary

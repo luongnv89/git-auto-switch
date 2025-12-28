@@ -21,7 +21,7 @@ cmd_add() {
 
   # Add account to state
   add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
-    "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
+    "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACES_JSON" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
 
   # Save state
   save_state

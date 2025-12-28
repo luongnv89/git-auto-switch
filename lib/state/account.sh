@@ -2,12 +2,13 @@
 # Account CRUD operations on state
 
 # Add account to state
+# workspaces_json should be a JSON array string like '["~/work", "~/projects"]'
 add_account() {
   local id="$1"
   local name="$2"
   local ssh_alias="$3"
   local ssh_key_path="$4"
-  local workspace="$5"
+  local workspaces_json="$5"
   local git_name="$6"
   local git_email="$7"
 
@@ -34,13 +35,13 @@ add_account() {
   local timestamp
   timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-  # Add account to state
+  # Add account to state with workspaces as array
   STATE_JSON=$(echo "$STATE_JSON" | jq \
     --arg id "$id" \
     --arg name "$name" \
     --arg ssh_alias "$ssh_alias" \
     --arg ssh_key_path "$ssh_key_path" \
-    --arg workspace "$workspace" \
+    --argjson workspaces "$workspaces_json" \
     --arg git_name "$git_name" \
     --arg git_email "$git_email" \
     --arg created_at "$timestamp" \
@@ -49,7 +50,7 @@ add_account() {
       name: $name,
       ssh_alias: $ssh_alias,
       ssh_key_path: $ssh_key_path,
-      workspace: $workspace,
+      workspaces: $workspaces,
       git_name: $git_name,
       git_email: $git_email,
       created_at: $created_at
@@ -98,7 +99,8 @@ update_account() {
 # Interactive prompts to collect account info
 # Sets global ACCOUNT_* variables directly instead of returning via stdout
 prompt_account_info() {
-  local name ssh_alias ssh_key_path workspace git_name git_email
+  local name ssh_alias ssh_key_path git_name git_email
+  local -a workspaces=()
 
   echo
   read -rp "Account name (e.g., personal, work): " name
@@ -107,14 +109,22 @@ prompt_account_info() {
     read -rp "Account name: " name
   done
 
-  # Ask for workspace first so we can use it for SSH key default path
+  # Ask for workspaces (multiple allowed)
+  echo
+  log_info "Add workspace folders for this account (you can add multiple)"
   local default_workspace="$HOME/workspace/$name"
-  read -rp "Workspace folder [$default_workspace]: " workspace
-  workspace="${workspace:-$default_workspace}"
+  read -rp "Workspace folder [$default_workspace]: " workspace_input
+  workspace_input="${workspace_input:-$default_workspace}"
+  workspaces+=("$workspace_input")
 
-  # Expand workspace path for use in default key path
-  local expanded_workspace
-  expanded_workspace=$(expand_path "$workspace")
+  # Ask for additional workspaces
+  while true; do
+    read -rp "Add another workspace? (leave empty to continue): " workspace_input
+    if [[ -z "$workspace_input" ]]; then
+      break
+    fi
+    workspaces+=("$workspace_input")
+  done
 
   local default_alias="gh-$name"
   read -rp "SSH alias [$default_alias]: " ssh_alias
@@ -124,8 +134,8 @@ prompt_account_info() {
     read -rp "SSH alias: " ssh_alias
   done
 
-  # Default SSH key path inside workspace/.ssh folder
-  local default_key="$workspace/.ssh/id_ed25519"
+  # Default SSH key path inside first workspace/.ssh folder
+  local default_key="${workspaces[0]}/.ssh/id_ed25519"
   read -rp "SSH key path [$default_key]: " ssh_key_path
   ssh_key_path="${ssh_key_path:-$default_key}"
 
@@ -147,11 +157,16 @@ prompt_account_info() {
     echo "----------------------------------------"
     echo "  Account Summary"
     echo "----------------------------------------"
-    echo "  1) Account name:  $name"
-    echo "  2) Workspace:     $workspace"
-    echo "  3) SSH alias:     $ssh_alias"
-    echo "  4) SSH key path:  $ssh_key_path"
-    echo "  5) Git user.name: $git_name"
+    echo "  1) Account name:   $name"
+    echo "  2) Workspaces:"
+    local ws_idx=0
+    for ws in "${workspaces[@]}"; do
+      echo "       [$ws_idx] $ws"
+      ((ws_idx++))
+    done
+    echo "  3) SSH alias:      $ssh_alias"
+    echo "  4) SSH key path:   $ssh_key_path"
+    echo "  5) Git user.name:  $git_name"
     echo "  6) Git user.email: $git_email"
     echo "----------------------------------------"
 
@@ -162,13 +177,16 @@ prompt_account_info() {
     echo
     log_info "Validating configuration..."
 
-    # Check if workspace exists
-    expanded_workspace=$(expand_path "$workspace")
-    if [[ -d "$expanded_workspace" ]]; then
-      log_success "Workspace exists: $expanded_workspace"
-    else
-      log_warn "Workspace does not exist (will be created): $expanded_workspace"
-    fi
+    # Check if workspaces exist
+    for ws in "${workspaces[@]}"; do
+      local expanded_ws
+      expanded_ws=$(expand_path "$ws")
+      if [[ -d "$expanded_ws" ]]; then
+        log_success "Workspace exists: $expanded_ws"
+      else
+        log_warn "Workspace does not exist (will be created): $expanded_ws"
+      fi
+    done
 
     # Check if SSH key exists
     local expanded_key
@@ -214,7 +232,12 @@ prompt_account_info() {
     fi
 
     echo "Options:"
-    echo "  [1-6] Edit a field"
+    echo "  [1]   Edit account name"
+    echo "  [2]   Manage workspaces (add/remove)"
+    echo "  [3]   Edit SSH alias"
+    echo "  [4]   Edit SSH key path"
+    echo "  [5]   Edit Git user.name"
+    echo "  [6]   Edit Git user.email"
     echo "  [t]   Test SSH authentication again"
     echo "  [c]   Confirm and save"
     echo "  [a]   Abort this account"
@@ -233,8 +256,52 @@ prompt_account_info() {
         fi
         ;;
       2)
-        read -rp "Workspace folder [$workspace]: " new_val
-        [[ -n "$new_val" ]] && workspace="$new_val"
+        # Workspace management submenu
+        while true; do
+          echo
+          echo "Current workspaces:"
+          ws_idx=0
+          for ws in "${workspaces[@]}"; do
+            echo "  [$ws_idx] $ws"
+            ((ws_idx++))
+          done
+          echo
+          echo "  [a] Add new workspace"
+          echo "  [r] Remove workspace by index"
+          echo "  [d] Done"
+          echo
+          read -rp "Workspace action: " ws_action
+          case "$ws_action" in
+            a|A)
+              read -rp "New workspace folder: " new_ws
+              if [[ -n "$new_ws" ]]; then
+                workspaces+=("$new_ws")
+                log_success "Added workspace: $new_ws"
+              fi
+              ;;
+            r|R)
+              if [[ ${#workspaces[@]} -le 1 ]]; then
+                log_warn "Cannot remove the last workspace. At least one is required."
+              else
+                read -rp "Index to remove (0-$((${#workspaces[@]}-1))): " rm_idx
+                if [[ "$rm_idx" =~ ^[0-9]+$ ]] && [[ $rm_idx -lt ${#workspaces[@]} ]]; then
+                  log_info "Removed workspace: ${workspaces[$rm_idx]}"
+                  unset 'workspaces[rm_idx]'
+                  # Re-index array
+                  workspaces=("${workspaces[@]}")
+                else
+                  log_warn "Invalid index."
+                fi
+              fi
+              ;;
+            d|D)
+              break
+              ;;
+            *)
+              log_warn "Invalid choice."
+              ;;
+          esac
+        done
         ;;
       3)
         read -rp "SSH alias [$ssh_alias]: " new_val
@@ -272,12 +339,25 @@ prompt_account_info() {
         if [[ $issues -gt 0 ]]; then
           log_warn "Cannot confirm with unresolved issues. Please fix them first."
         else
+          # Build workspaces JSON array
+          local workspaces_json="["
+          local first=true
+          for ws in "${workspaces[@]}"; do
+            if [[ "$first" == "true" ]]; then
+              first=false
+            else
+              workspaces_json+=","
+            fi
+            workspaces_json+="\"$ws\""
+          done
+          workspaces_json+="]"
+
           # Set global variables and exit loop
           ACCOUNT_ID=$(generate_id "$name")
           ACCOUNT_NAME="$name"
           ACCOUNT_SSH_ALIAS="$ssh_alias"
           ACCOUNT_SSH_KEY_PATH="$ssh_key_path"
-          ACCOUNT_WORKSPACE="$workspace"
+          ACCOUNT_WORKSPACES_JSON="$workspaces_json"
           ACCOUNT_GIT_NAME="$git_name"
           ACCOUNT_GIT_EMAIL="$git_email"
           return 0

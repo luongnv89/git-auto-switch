@@ -20,23 +20,30 @@ cmd_list() {
   echo "Configured accounts ($account_count):"
   echo
 
-  # Print header
-  printf "%-15s %-20s %-25s %-30s\n" "ID" "NAME" "EMAIL" "WORKSPACE"
-  printf "%-15s %-20s %-25s %-30s\n" "---------------" "--------------------" "-------------------------" "------------------------------"
-
-  # Print accounts
+  # Print accounts with details
   for ((i=0; i<account_count; i++)); do
     local account
     account=$(get_account_by_index "$i")
 
-    local id name git_email workspace
+    local id name git_name git_email ssh_alias
     id=$(echo "$account" | jq -r '.id')
     name=$(echo "$account" | jq -r '.name')
+    git_name=$(echo "$account" | jq -r '.git_name')
     git_email=$(echo "$account" | jq -r '.git_email')
-    workspace=$(echo "$account" | jq -r '.workspace')
+    ssh_alias=$(echo "$account" | jq -r '.ssh_alias')
 
-    printf "%-15s %-20s %-25s %-30s\n" "$id" "$name" "$git_email" "$workspace"
+    echo "[$id] $name"
+    echo "  Git:    $git_name <$git_email>"
+    echo "  SSH:    $ssh_alias"
+    echo "  Workspaces:"
+
+    local workspaces_count
+    workspaces_count=$(echo "$account" | jq '.workspaces | length')
+    for ((j=0; j<workspaces_count; j++)); do
+      local workspace
+      workspace=$(echo "$account" | jq -r ".workspaces[$j]")
+      echo "    - $workspace"
+    done
+    echo
   done
-
-  echo
 }

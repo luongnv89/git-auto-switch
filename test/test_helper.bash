@@ -45,5 +45,5 @@ teardown() {
 create_test_state() {
   init_state
   add_account "personal" "Personal" "gh-personal" "$HOME/.ssh/id_personal" \
-    "$HOME/workspace/personal" "John Doe" "john@personal.com"
+    '["'"$HOME"'/workspace/personal"]' "John Doe" "john@personal.com"
 }

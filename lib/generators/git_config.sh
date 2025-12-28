@@ -39,16 +39,24 @@ generate_git_include_block() {
     local account
     account=$(get_account_by_index "$i")
 
-    local id workspace
+    local id
     id=$(echo "$account" | jq -r '.id')
-    workspace=$(echo "$account" | jq -r '.workspace')
 
-    # Expand ~ for gitdir matching
-    local expanded_workspace
-    expanded_workspace=$(expand_path "$workspace")
+    # Get all workspaces for this account
+    local workspaces_count
+    workspaces_count=$(echo "$account" | jq '.workspaces | length')
 
-    output+="[includeIf \"gitdir:${expanded_workspace}/\"]"$'\n'
-    output+="  path = ~/.gitconfig-${id}"$'\n'
+    for ((j=0; j<workspaces_count; j++)); do
+      local workspace
+      workspace=$(echo "$account" | jq -r ".workspaces[$j]")
+
+      # Expand ~ for gitdir matching
+      local expanded_workspace
+      expanded_workspace=$(expand_path "$workspace")
+
+      output+="[includeIf \"gitdir:${expanded_workspace}/\"]"$'\n'
+      output+="  path = ~/.gitconfig-${id}"$'\n'
+    done
   done
 
   output+="$MARKER_END"$'\n'
