@@ -1,34 +1,28 @@
 #!/usr/bin/env bash
+#
+# Legacy installer - redirects to new CLI
+#
+# This script is kept for backward compatibility.
+# Please use 'git-auto-switch' or 'gas' commands instead.
+#
+
 set -e
 
-PROJECT_NAME="git-auto-switch"
-INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKUP_DIR="$HOME/.${PROJECT_NAME}-backup/$(date +%Y%m%d-%H%M%S)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "========================================"
-echo " Git Auto Switch "
+echo "  git-auto-switch"
 echo "========================================"
 echo
-
-read -rp "This will configure SSH & Git auto-switching. Continue? [y/N] " yn
-[[ "$yn" != "y" ]] && exit 0
-
-mkdir -p "$BACKUP_DIR"
-
-# Load modules
-source "$INSTALL_DIR/lib/cleanup.sh"
-source "$INSTALL_DIR/lib/setup.sh"
-source "$INSTALL_DIR/lib/ssh.sh"
-source "$INSTALL_DIR/lib/git.sh"
-source "$INSTALL_DIR/lib/remotes.sh"
-source "$INSTALL_DIR/lib/hooks.sh"
-
-backup_configs
-clean_old_configs
-setup_accounts
-rewrite_all_remotes
-
+echo "NOTE: install.sh is deprecated."
+echo "Please use the new CLI commands instead:"
 echo
-echo "✅ Installation complete"
-echo "🛟 Backup saved at: $BACKUP_DIR"
-echo "Restart your terminal to apply changes"
+echo "  ./git-auto-switch init    # First-time setup"
+echo "  ./git-auto-switch add     # Add account"
+echo "  ./git-auto-switch list    # List accounts"
+echo "  ./git-auto-switch apply   # Apply configuration"
+echo
+echo "Redirecting to 'git-auto-switch init'..."
+echo
+
+exec "$SCRIPT_DIR/git-auto-switch" init

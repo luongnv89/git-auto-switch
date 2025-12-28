@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#
+# git-auto-switch - Manage multiple GitHub accounts with automatic identity switching
+#
+# Usage: git-auto-switch <command> [options]
+#        gas <command> [options]
+#
+
+set -euo pipefail
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load core modules
+source "$SCRIPT_DIR/lib/core/constants.sh"
+source "$SCRIPT_DIR/lib/core/logger.sh"
+source "$SCRIPT_DIR/lib/core/utils.sh"
+
+# Load state modules
+source "$SCRIPT_DIR/lib/state/state.sh"
+source "$SCRIPT_DIR/lib/state/account.sh"
+
+# Load generators
+source "$SCRIPT_DIR/lib/generators/ssh_config.sh"
+source "$SCRIPT_DIR/lib/generators/git_config.sh"
+source "$SCRIPT_DIR/lib/generators/hooks.sh"
+
+# Load applicators
+source "$SCRIPT_DIR/lib/applicators/ssh.sh"
+source "$SCRIPT_DIR/lib/applicators/git.sh"
+source "$SCRIPT_DIR/lib/applicators/hooks.sh"
+source "$SCRIPT_DIR/lib/applicators/remotes.sh"
+
+# Load commands
+source "$SCRIPT_DIR/lib/commands/init.sh"
+source "$SCRIPT_DIR/lib/commands/add.sh"
+source "$SCRIPT_DIR/lib/commands/remove.sh"
+source "$SCRIPT_DIR/lib/commands/list.sh"
+source "$SCRIPT_DIR/lib/commands/apply.sh"
+source "$SCRIPT_DIR/lib/commands/validate.sh"
+source "$SCRIPT_DIR/lib/commands/audit.sh"
+
+# Load CLI
+source "$SCRIPT_DIR/lib/cli/help.sh"
+source "$SCRIPT_DIR/lib/cli/router.sh"
+
+# Route to command
+route_command "$@"
