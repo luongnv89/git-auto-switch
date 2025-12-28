@@ -96,6 +96,7 @@ update_account() {
 }
 
 # Interactive prompts to collect account info
+# Sets global ACCOUNT_* variables directly instead of returning via stdout
 prompt_account_info() {
   local name ssh_alias ssh_key_path workspace git_name git_email
 
@@ -136,16 +137,12 @@ prompt_account_info() {
     read -rp "Git user.email: " git_email
   done
 
-  # Return as JSON for easy parsing
-  local id
-  id=$(generate_id "$name")
-
-  echo "$id|$name|$ssh_alias|$ssh_key_path|$workspace|$git_name|$git_email"
-}
-
-# Parse account info from prompt result
-parse_account_info() {
-  local info="$1"
-  IFS='|' read -r ACCOUNT_ID ACCOUNT_NAME ACCOUNT_SSH_ALIAS ACCOUNT_SSH_KEY_PATH \
-    ACCOUNT_WORKSPACE ACCOUNT_GIT_NAME ACCOUNT_GIT_EMAIL <<< "$info"
+  # Set global variables
+  ACCOUNT_ID=$(generate_id "$name")
+  ACCOUNT_NAME="$name"
+  ACCOUNT_SSH_ALIAS="$ssh_alias"
+  ACCOUNT_SSH_KEY_PATH="$ssh_key_path"
+  ACCOUNT_WORKSPACE="$workspace"
+  ACCOUNT_GIT_NAME="$git_name"
+  ACCOUNT_GIT_EMAIL="$git_email"
 }

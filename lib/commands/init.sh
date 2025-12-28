@@ -27,9 +27,7 @@ cmd_init() {
   # Prompt for first account
   log_info "Let's set up your first account"
 
-  local account_info
-  account_info=$(prompt_account_info)
-  parse_account_info "$account_info"
+  prompt_account_info
 
   # Add account to state
   add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
@@ -43,8 +41,7 @@ cmd_init() {
       break
     fi
 
-    account_info=$(prompt_account_info)
-    parse_account_info "$account_info"
+    prompt_account_info
 
     add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
       "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
