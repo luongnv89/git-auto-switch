@@ -21,6 +21,7 @@ COMMANDS:
   apply       Apply configuration to system (SSH, Git, hooks)
   validate    Validate configuration and check for issues
   audit       Audit repositories for identity mismatches (--fix to auto-fix)
+  current     Show current active account for this directory
   help        Show this help message
   version     Show version information
 
@@ -48,6 +49,9 @@ EXAMPLES:
 
   # Audit and fix issues
   git-auto-switch audit --fix
+
+  # Show current active account
+  git-auto-switch current
 
 CONFIG FILE:
   $CONFIG_FILE

@@ -45,6 +45,7 @@ source "$SCRIPT_DIR/lib/commands/list.sh"
 source "$SCRIPT_DIR/lib/commands/apply.sh"
 source "$SCRIPT_DIR/lib/commands/validate.sh"
 source "$SCRIPT_DIR/lib/commands/audit.sh"
+source "$SCRIPT_DIR/lib/commands/current.sh"
 
 # Load CLI
 source "$SCRIPT_DIR/lib/cli/help.sh"

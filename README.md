@@ -57,6 +57,9 @@ gas audit
 
 # Audit and auto-fix issues
 gas audit --fix
+
+# Show current active account
+gas current
 ```
 
 ## Commands
@@ -70,6 +73,7 @@ gas audit --fix
 | `apply` | Apply configuration to system |
 | `validate` | Validate configuration and check for issues |
 | `audit [--fix]` | Audit repositories for identity mismatches (--fix to auto-fix) |
+| `current` | Show current active account for this directory |
 | `help` | Show help message |
 | `version` | Show version |
 

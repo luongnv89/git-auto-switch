@@ -27,6 +27,9 @@ route_command() {
     audit)
       cmd_audit "$@"
       ;;
+    current|whoami)
+      cmd_current "$@"
+      ;;
     version|--version|-v)
       show_version
       ;;
