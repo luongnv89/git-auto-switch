@@ -75,7 +75,7 @@ rewrite_workspace_remotes() {
   local count=0
   while IFS= read -r repo; do
     rewrite_repo_remotes "$repo" "$ssh_alias"
-    ((count++))
+    ((count++)) || true
   done <<< "$repos"
 
   log_success "Processed $count repositories in $workspace"

@@ -70,7 +70,7 @@ cmd_audit() {
       fi
 
       while IFS= read -r repo; do
-        ((total_repos++))
+        ((total_repos++)) || true
 
         local current_dir
         current_dir=$(pwd)
@@ -106,7 +106,7 @@ cmd_audit() {
 
         # Report and optionally fix issues
         if [[ "$email_ok" == false || "$remote_ok" == false ]]; then
-          ((issues++))
+          ((issues++)) || true
           echo
           log_warn "Issues in: $repo"
 
