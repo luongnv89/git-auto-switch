@@ -11,9 +11,10 @@ A CLI tool for managing multiple GitHub accounts with automatic identity switchi
 - **Multiple workspaces per account** - map several folders to the same identity
 - Automatic Git identity switching based on workspace folders
 - Pre-commit hook to prevent wrong-email commits
-- SSH key validation during setup
-- Audit and validate your configuration
-- Automatic remote URL rewriting
+- SSH key validation and GitHub authentication check during setup
+- Audit repositories and auto-fix identity issues
+- Automatic remote URL rewriting (HTTPS to SSH)
+- Show current active account for any directory
 
 ## Requirements
 
@@ -46,7 +47,12 @@ gas init
 # Add more accounts
 gas add
 
-# List configured accounts
+# Show current active account
+gas current
+# or:
+gas whoami
+
+# List all configured accounts
 gas list
 
 # Validate configuration
@@ -58,8 +64,8 @@ gas audit
 # Audit and auto-fix issues
 gas audit --fix
 
-# Show current active account
-gas current
+# Apply configuration after manual changes
+gas apply
 ```
 
 ## Commands
@@ -73,16 +79,66 @@ gas current
 | `apply` | Apply configuration to system |
 | `validate` | Validate configuration and check for issues |
 | `audit [--fix]` | Audit repositories for identity mismatches (--fix to auto-fix) |
-| `current` | Show current active account for this directory |
+| `current` | Show current active account for this directory (alias: `whoami`) |
 | `help` | Show help message |
 | `version` | Show version |
 
 ## How It Works
 
-1. **SSH Keys**: Creates separate ed25519 SSH keys for each account
+1. **SSH Keys**: Uses separate SSH keys for each account (generates ed25519 keys if needed)
 2. **SSH Config**: Adds host aliases (e.g., `gh-work`, `gh-personal`) to `~/.ssh/config`
 3. **Git Config**: Uses `includeIf.gitdir:` to auto-switch identity based on workspace
 4. **Pre-commit Hook**: Validates email before each commit to prevent mistakes
+5. **Remote Rewriting**: Converts `git@github.com` to `git@gh-alias` for proper SSH key usage
+
+## Workflow
+
+### Adding a New Account
+
+When you run `gas add`, the tool will:
+
+1. Prompt for account details (name, workspaces, SSH key, Git identity)
+2. Validate SSH key exists and test GitHub authentication
+3. Automatically proceed if validation passes (no manual confirmation needed)
+4. Apply configuration immediately
+5. Ask if you want to add another account
+
+### Checking Current Account
+
+```bash
+$ gas current
+
+========================================
+  Current Account: work
+========================================
+
+  Account ID:  work
+  Git Name:    John Doe
+  Git Email:   john@company.com
+  SSH Alias:   gh-work
+
+  Directory:   /home/user/workspace/work/project
+
+  Workspaces:
+    - ~/workspace/work
+    - ~/projects/company
+```
+
+### Fixing Issues
+
+The `audit --fix` command automatically fixes:
+- **Email mismatches**: Removes local `user.email` so global `includeIf` takes over
+- **Wrong remotes**: Rewrites `git@github.com` to use the correct SSH alias
+
+```bash
+$ gas audit --fix
+
+Issues in: /home/user/workspace/work/repo1
+  Email:
+    Expected: john@company.com
+    Actual:   wrong@email.com
+  Fixed: Removed local user.email (will use global includeIf)
+```
 
 ## Configuration
 
@@ -124,7 +180,7 @@ Add another workspace? (leave empty to continue): ~/projects/company
 Add another workspace? (leave empty to continue):
 ```
 
-**Managing workspaces in the confirmation screen:**
+**Managing workspaces in the edit menu:**
 ```
 Options:
   [2]   Manage workspaces (add/remove)
@@ -156,11 +212,16 @@ git clone git@gh-work:org/repo.git
 git clone git@gh-personal:user/repo.git
 ```
 
+Existing repositories with `git@github.com` remotes will be automatically rewritten when you run `gas apply` or `gas audit --fix`.
+
 ## Rollback
 
-Backups are stored in `~/.git-auto-switch/backup/<timestamp>/`:
+Backups are created automatically before any changes and stored in `~/.git-auto-switch/backup/<timestamp>/`:
 
 ```bash
+# List backups
+ls ~/.git-auto-switch/backup/
+
 # Restore SSH config
 cp ~/.git-auto-switch/backup/<timestamp>/ssh_config ~/.ssh/config
 
@@ -179,7 +240,7 @@ brew install shellcheck bats-core jq
 # Run linter
 make lint
 
-# Run tests
+# Run tests (59 tests)
 make test
 
 # Run both
