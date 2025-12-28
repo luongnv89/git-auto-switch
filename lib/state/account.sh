@@ -226,11 +226,35 @@ prompt_account_info() {
     fi
 
     echo
-    if [[ $issues -gt 0 ]]; then
-      log_warn "Please fix the issues above before continuing."
-      echo
+    if [[ $issues -eq 0 ]]; then
+      # No issues - automatically proceed
+      # Build workspaces JSON array
+      local workspaces_json="["
+      local first=true
+      for ws in "${workspaces[@]}"; do
+        if [[ "$first" == "true" ]]; then
+          first=false
+        else
+          workspaces_json+=","
+        fi
+        workspaces_json+="\"$ws\""
+      done
+      workspaces_json+="]"
+
+      # Set global variables and exit loop
+      ACCOUNT_ID=$(generate_id "$name")
+      ACCOUNT_NAME="$name"
+      ACCOUNT_SSH_ALIAS="$ssh_alias"
+      ACCOUNT_SSH_KEY_PATH="$ssh_key_path"
+      ACCOUNT_WORKSPACES_JSON="$workspaces_json"
+      ACCOUNT_GIT_NAME="$git_name"
+      ACCOUNT_GIT_EMAIL="$git_email"
+      return 0
     fi
 
+    # There are issues - show menu to fix them
+    log_warn "Please fix the issues above before continuing."
+    echo
     echo "Options:"
     echo "  [1]   Edit account name"
     echo "  [2]   Manage workspaces (add/remove)"
@@ -239,7 +263,6 @@ prompt_account_info() {
     echo "  [5]   Edit Git user.name"
     echo "  [6]   Edit Git user.email"
     echo "  [t]   Test SSH authentication again"
-    echo "  [c]   Confirm and save"
     echo "  [a]   Abort this account"
     echo
     read -rp "Your choice: " choice
@@ -335,40 +358,12 @@ prompt_account_info() {
         # Re-run validation by continuing the loop
         log_info "Re-testing SSH authentication..."
         ;;
-      c|C)
-        if [[ $issues -gt 0 ]]; then
-          log_warn "Cannot confirm with unresolved issues. Please fix them first."
-        else
-          # Build workspaces JSON array
-          local workspaces_json="["
-          local first=true
-          for ws in "${workspaces[@]}"; do
-            if [[ "$first" == "true" ]]; then
-              first=false
-            else
-              workspaces_json+=","
-            fi
-            workspaces_json+="\"$ws\""
-          done
-          workspaces_json+="]"
-
-          # Set global variables and exit loop
-          ACCOUNT_ID=$(generate_id "$name")
-          ACCOUNT_NAME="$name"
-          ACCOUNT_SSH_ALIAS="$ssh_alias"
-          ACCOUNT_SSH_KEY_PATH="$ssh_key_path"
-          ACCOUNT_WORKSPACES_JSON="$workspaces_json"
-          ACCOUNT_GIT_NAME="$git_name"
-          ACCOUNT_GIT_EMAIL="$git_email"
-          return 0
-        fi
-        ;;
       a|A)
         log_info "Account setup aborted."
         return 1
         ;;
       *)
-        log_warn "Invalid choice. Please enter 1-6, t, c, or a."
+        log_warn "Invalid choice. Please enter 1-6, t, or a."
         ;;
     esac
   done
