@@ -20,8 +20,10 @@ cmd_remove() {
   if [[ -z "$account_id" ]]; then
     echo
     echo "Select account to remove:"
-    local ids
-    mapfile -t ids < <(list_account_ids)
+    local ids=()
+    while IFS= read -r id; do
+      ids+=("$id")
+    done < <(list_account_ids)
 
     select id in "${ids[@]}"; do
       if [[ -n "$id" ]]; then

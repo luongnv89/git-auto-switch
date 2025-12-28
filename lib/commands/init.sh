@@ -98,8 +98,10 @@ cmd_init() {
   if [[ $account_count -gt 1 ]]; then
     echo
     log_info "Select default account (used outside workspaces):"
-    local ids
-    mapfile -t ids < <(list_account_ids)
+    local ids=()
+    while IFS= read -r id; do
+      ids+=("$id")
+    done < <(list_account_ids)
 
     select default_id in "${ids[@]}"; do
       if [[ -n "$default_id" ]]; then
