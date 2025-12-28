@@ -157,6 +157,8 @@ prompt_account_info() {
 
     # Run validation checks
     local issues=0
+    local ssh_key_exists=false
+    local ssh_auth_ok=false
     echo
     log_info "Validating configuration..."
 
@@ -173,6 +175,26 @@ prompt_account_info() {
     expanded_key=$(expand_path "$ssh_key_path")
     if [[ -f "$expanded_key" ]]; then
       log_success "SSH key exists: $expanded_key"
+      ssh_key_exists=true
+
+      # Test SSH authentication with GitHub using this key
+      log_info "Testing SSH authentication with GitHub..."
+      local ssh_output
+      if ssh_output=$(ssh -i "$expanded_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -T git@github.com 2>&1); then
+        # SSH returns 1 on success with GitHub (it's expected)
+        ssh_auth_ok=true
+      elif echo "$ssh_output" | grep -q "successfully authenticated"; then
+        ssh_auth_ok=true
+      fi
+
+      if [[ "$ssh_auth_ok" == "true" ]]; then
+        log_success "SSH authentication successful"
+      else
+        log_error "SSH authentication failed. Have you added the public key to GitHub?"
+        echo "  Public key: ${expanded_key}.pub"
+        echo "  Add it at: https://github.com/settings/ssh/new"
+        ((issues++))
+      fi
     else
       log_warn "SSH key does not exist (will be generated): $expanded_key"
     fi
@@ -193,6 +215,7 @@ prompt_account_info() {
 
     echo "Options:"
     echo "  [1-6] Edit a field"
+    echo "  [t]   Test SSH authentication again"
     echo "  [c]   Confirm and save"
     echo "  [a]   Abort this account"
     echo
@@ -241,6 +264,10 @@ prompt_account_info() {
           fi
         fi
         ;;
+      t|T)
+        # Re-run validation by continuing the loop
+        log_info "Re-testing SSH authentication..."
+        ;;
       c|C)
         if [[ $issues -gt 0 ]]; then
           log_warn "Cannot confirm with unresolved issues. Please fix them first."
@@ -261,7 +288,7 @@ prompt_account_info() {
         return 1
         ;;
       *)
-        log_warn "Invalid choice. Please enter 1-6, c, or a."
+        log_warn "Invalid choice. Please enter 1-6, t, c, or a."
         ;;
     esac
   done
