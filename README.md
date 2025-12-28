@@ -54,6 +54,9 @@ gas validate
 
 # Audit repositories for identity issues
 gas audit
+
+# Audit and auto-fix issues
+gas audit --fix
 ```
 
 ## Commands
@@ -66,7 +69,7 @@ gas audit
 | `list` | List all configured accounts |
 | `apply` | Apply configuration to system |
 | `validate` | Validate configuration and check for issues |
-| `audit` | Audit repositories for identity mismatches |
+| `audit [--fix]` | Audit repositories for identity mismatches (--fix to auto-fix) |
 | `help` | Show help message |
 | `version` | Show version |
 
