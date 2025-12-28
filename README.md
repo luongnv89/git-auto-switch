@@ -8,8 +8,10 @@ A CLI tool for managing multiple GitHub accounts with automatic identity switchi
 ## Features
 
 - Manage multiple GitHub accounts with separate SSH keys
+- **Multiple workspaces per account** - map several folders to the same identity
 - Automatic Git identity switching based on workspace folders
 - Pre-commit hook to prevent wrong-email commits
+- SSH key validation during setup
 - Audit and validate your configuration
 - Automatic remote URL rewriting
 
@@ -87,13 +89,52 @@ Configuration is stored in `~/.git-auto-switch/config.json`:
       "id": "work",
       "name": "Work Account",
       "ssh_alias": "gh-work",
-      "ssh_key_path": "~/.ssh/id_ed25519_work",
-      "workspace": "~/work",
+      "ssh_key_path": "~/workspace/work/.ssh/id_ed25519",
+      "workspaces": [
+        "~/workspace/work",
+        "~/projects/company"
+      ],
       "git_name": "John Doe",
       "git_email": "john@company.com"
     }
   ]
 }
+```
+
+## Multiple Workspaces
+
+Each account can have multiple workspace folders. All repositories within any of these folders will use the same Git identity and SSH key.
+
+**Use cases:**
+- Separate folders for different projects under the same account
+- Client work spread across multiple directories
+- Open source contributions in a dedicated folder
+
+**Adding workspaces during setup:**
+```
+Workspace folder [~/workspace/work]: ~/workspace/work
+Add another workspace? (leave empty to continue): ~/projects/company
+Add another workspace? (leave empty to continue):
+```
+
+**Managing workspaces in the confirmation screen:**
+```
+Options:
+  [2]   Manage workspaces (add/remove)
+
+Workspace action: a
+New workspace folder: ~/freelance/client-a
+```
+
+**Example output from `gas list`:**
+```
+[work] Work Account
+  Git:    John Doe <john@company.com>
+  SSH:    gh-work
+  Workspaces:
+    - ~/workspace/work
+    - ~/projects/company
+    - ~/freelance/client-a
 ```
 
 ## Cloning Repositories
