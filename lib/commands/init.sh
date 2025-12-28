@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 # Initialize git-auto-switch configuration
 
+# Cleanup handler for Ctrl+C during init
+_init_cleanup() {
+  echo
+  local account_count
+  account_count=$(get_account_count)
+
+  if [[ $account_count -gt 0 ]]; then
+    log_warn "Interrupted! Saving $account_count account(s) configured so far..."
+    save_state
+    log_success "Progress saved to: $CONFIG_FILE"
+    echo "Run 'gas add' to add more accounts, or 'gas apply' to apply configuration."
+  else
+    log_warn "Interrupted! No accounts were configured."
+  fi
+
+  # Remove trap and exit
+  trap - INT
+  exit 130
+}
+
 cmd_init() {
   # Check if already initialized
   if [[ -f "$CONFIG_FILE" ]]; then
@@ -20,18 +40,24 @@ cmd_init() {
   echo "This wizard will help you configure multiple GitHub accounts"
   echo "with automatic identity switching based on workspace folders."
   echo
+  log_info "Tip: Press Ctrl+C anytime to save progress and quit."
+  echo
 
   # Initialize empty state
   init_state
+
+  # Set up interrupt handler
+  trap '_init_cleanup' INT
 
   # Prompt for first account
   log_info "Let's set up your first account"
 
   prompt_account_info
 
-  # Add account to state
+  # Add account to state and save immediately
   add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
     "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
+  save_state
 
   # Ask if user wants to add more accounts
   while true; do
@@ -43,11 +69,16 @@ cmd_init() {
 
     prompt_account_info
 
+    # Add account to state and save immediately
     add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
       "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
+    save_state
   done
 
-  # Set default account before saving and applying
+  # Remove interrupt handler - we're in the final phase
+  trap - INT
+
+  # Set default account
   local account_count
   account_count=$(get_account_count)
 
@@ -71,7 +102,7 @@ cmd_init() {
     set_default_git_identity "$account"
   fi
 
-  # Save state
+  # Save final state
   save_state
 
   # Ask to apply configuration
