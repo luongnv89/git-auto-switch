@@ -1,0 +1,22 @@
+# Backup files
+*.bak
+*~
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Test artifacts
+test/tmp/
+.bats-run-*/
+
+# Environment
+.env
+.env.local

@@ -1,0 +1,8 @@
+# Shell dialect
+shell=bash
+
+# SC2034: Variable appears unused - arrays are used across sourced modules
+disable=SC2034
+
+# Source path for finding sourced files
+source-path=lib
