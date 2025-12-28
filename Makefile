@@ -24,17 +24,32 @@ check-deps:
 	@command -v jq >/dev/null 2>&1 || { echo "jq not found. Install with: brew install jq"; exit 1; }
 	@echo "All dependencies installed!"
 
-## Install to /usr/local/bin
+## Install to ~/.local/bin (user-local, no sudo needed)
 install:
-	@echo "Installing git-auto-switch..."
-	@ln -sf "$(CURDIR)/git-auto-switch" /usr/local/bin/git-auto-switch
-	@ln -sf "$(CURDIR)/git-auto-switch" /usr/local/bin/gas
+	@echo "Installing git-auto-switch to ~/.local/bin..."
+	@mkdir -p ~/.local/bin
+	@ln -sf "$(CURDIR)/git-auto-switch" ~/.local/bin/git-auto-switch
+	@ln -sf "$(CURDIR)/git-auto-switch" ~/.local/bin/gas
+	@echo "Installed! Ensure ~/.local/bin is in your PATH"
+	@echo "Run 'git-auto-switch --help' or 'gas --help'"
+
+## Install to /usr/local/bin (requires sudo)
+install-global:
+	@echo "Installing git-auto-switch to /usr/local/bin..."
+	@sudo ln -sf "$(CURDIR)/git-auto-switch" /usr/local/bin/git-auto-switch
+	@sudo ln -sf "$(CURDIR)/git-auto-switch" /usr/local/bin/gas
 	@echo "Installed! Run 'git-auto-switch --help' or 'gas --help'"
 
-## Uninstall
+## Uninstall from ~/.local/bin
 uninstall:
-	@echo "Uninstalling git-auto-switch..."
-	@rm -f /usr/local/bin/git-auto-switch /usr/local/bin/gas
+	@echo "Uninstalling git-auto-switch from ~/.local/bin..."
+	@rm -f ~/.local/bin/git-auto-switch ~/.local/bin/gas
+	@echo "Uninstalled!"
+
+## Uninstall from /usr/local/bin (requires sudo)
+uninstall-global:
+	@echo "Uninstalling git-auto-switch from /usr/local/bin..."
+	@sudo rm -f /usr/local/bin/git-auto-switch /usr/local/bin/gas
 	@echo "Uninstalled!"
 
 ## Cleanup
