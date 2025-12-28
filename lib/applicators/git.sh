@@ -99,10 +99,10 @@ set_default_git_identity() {
 validate_git_config() {
   local account_json="$1"
 
-  local id workspace git_email
+  local id git_email workspaces_count
   id=$(echo "$account_json" | jq -r '.id')
-  workspace=$(echo "$account_json" | jq -r '.workspace')
   git_email=$(echo "$account_json" | jq -r '.git_email')
+  workspaces_count=$(echo "$account_json" | jq '.workspaces | length')
 
   local errors=0
 
@@ -113,18 +113,23 @@ validate_git_config() {
     ((errors++))
   fi
 
-  # Check workspace directory exists
-  local expanded_workspace
-  expanded_workspace=$(expand_path "$workspace")
-  if [[ ! -d "$expanded_workspace" ]]; then
-    log_warn "Workspace directory does not exist: $expanded_workspace"
-  fi
+  # Check each workspace
+  for ((i=0; i<workspaces_count; i++)); do
+    local workspace expanded_workspace
+    workspace=$(echo "$account_json" | jq -r ".workspaces[$i]")
+    expanded_workspace=$(expand_path "$workspace")
 
-  # Check includeIf entry exists in .gitconfig
-  if ! grep -q "gitdir:${expanded_workspace}/" "$GIT_CONFIG" 2>/dev/null; then
-    log_error "Missing includeIf entry for workspace: $workspace"
-    ((errors++))
-  fi
+    # Check workspace directory exists
+    if [[ ! -d "$expanded_workspace" ]]; then
+      log_warn "Workspace directory does not exist: $expanded_workspace"
+    fi
+
+    # Check includeIf entry exists in .gitconfig
+    if ! grep -q "gitdir:${expanded_workspace}/" "$GIT_CONFIG" 2>/dev/null; then
+      log_error "Missing includeIf entry for workspace: $workspace"
+      ((errors++))
+    fi
+  done
 
   return $errors
 }

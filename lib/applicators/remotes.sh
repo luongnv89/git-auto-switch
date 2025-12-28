@@ -92,10 +92,14 @@ rewrite_all_remotes() {
     local account
     account=$(get_account_by_index "$i")
 
-    local workspace ssh_alias
-    workspace=$(echo "$account" | jq -r '.workspace')
+    local ssh_alias workspaces_count
     ssh_alias=$(echo "$account" | jq -r '.ssh_alias')
+    workspaces_count=$(echo "$account" | jq '.workspaces | length')
 
-    rewrite_workspace_remotes "$workspace" "$ssh_alias"
+    for ((j=0; j<workspaces_count; j++)); do
+      local workspace
+      workspace=$(echo "$account" | jq -r ".workspaces[$j]")
+      rewrite_workspace_remotes "$workspace" "$ssh_alias"
+    done
   done
 }

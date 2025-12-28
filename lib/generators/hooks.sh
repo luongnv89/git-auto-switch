@@ -32,7 +32,7 @@ fi
 # Find matching account by workspace
 expected_email=$(jq -r --arg repo "$repo_path" '
   .accounts[] |
-  select(($repo + "/") | startswith((.workspace | gsub("~"; env.HOME)) + "/")) |
+  select(.workspaces[] as $ws | ($repo + "/") | startswith(($ws | gsub("~"; env.HOME)) + "/")) |
   .git_email
 ' "$CONFIG_FILE" | head -n1)
 

@@ -23,10 +23,9 @@ EOF
 generate_ssh_config() {
   require_jq
 
-  local output=""
-  output+="$MARKER_START"$'\n'
-  output+="# Managed by git-auto-switch - DO NOT EDIT"$'\n'
-  output+=$'\n'
+  echo "$MARKER_START"
+  echo "# Managed by git-auto-switch - DO NOT EDIT"
+  echo
 
   local account_count
   account_count=$(get_account_count)
@@ -34,10 +33,8 @@ generate_ssh_config() {
   for ((i=0; i<account_count; i++)); do
     local account
     account=$(get_account_by_index "$i")
-    output+=$(generate_ssh_config_entry "$account")
+    generate_ssh_config_entry "$account"
   done
 
-  output+="$MARKER_END"$'\n'
-
-  echo "$output"
+  echo "$MARKER_END"
 }
