@@ -14,7 +14,10 @@ cmd_add() {
   echo
 
   # Prompt for account info
-  prompt_account_info
+  if ! prompt_account_info; then
+    log_info "Account addition cancelled."
+    return 0
+  fi
 
   # Add account to state
   add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \

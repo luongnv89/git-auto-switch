@@ -49,15 +49,27 @@ cmd_init() {
   # Set up interrupt handler
   trap '_init_cleanup' INT
 
-  # Prompt for first account
+  # Prompt for first account (required)
   log_info "Let's set up your first account"
 
-  prompt_account_info
-
-  # Add account to state and save immediately
-  add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
-    "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
-  save_state
+  while true; do
+    if prompt_account_info; then
+      # Add account to state and save immediately
+      add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
+        "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
+      save_state
+      break
+    else
+      # User aborted - ask if they want to try again or quit
+      echo
+      read -rp "Would you like to try again? [Y/n] " retry
+      if [[ "$retry" == "n" || "$retry" == "N" ]]; then
+        log_warn "At least one account is required. Initialization cancelled."
+        trap - INT
+        return 1
+      fi
+    fi
+  done
 
   # Ask if user wants to add more accounts
   while true; do
@@ -67,12 +79,13 @@ cmd_init() {
       break
     fi
 
-    prompt_account_info
-
-    # Add account to state and save immediately
-    add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
-      "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
-    save_state
+    if prompt_account_info; then
+      # Add account to state and save immediately
+      add_account "$ACCOUNT_ID" "$ACCOUNT_NAME" "$ACCOUNT_SSH_ALIAS" \
+        "$ACCOUNT_SSH_KEY_PATH" "$ACCOUNT_WORKSPACE" "$ACCOUNT_GIT_NAME" "$ACCOUNT_GIT_EMAIL"
+      save_state
+    fi
+    # If aborted, just continue the loop (user can add another or exit)
   done
 
   # Remove interrupt handler - we're in the final phase

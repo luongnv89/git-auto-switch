@@ -141,12 +141,128 @@ prompt_account_info() {
     read -rp "Git user.email: " git_email
   done
 
-  # Set global variables
-  ACCOUNT_ID=$(generate_id "$name")
-  ACCOUNT_NAME="$name"
-  ACCOUNT_SSH_ALIAS="$ssh_alias"
-  ACCOUNT_SSH_KEY_PATH="$ssh_key_path"
-  ACCOUNT_WORKSPACE="$workspace"
-  ACCOUNT_GIT_NAME="$git_name"
-  ACCOUNT_GIT_EMAIL="$git_email"
+  # Validation and confirmation loop
+  while true; do
+    echo
+    echo "----------------------------------------"
+    echo "  Account Summary"
+    echo "----------------------------------------"
+    echo "  1) Account name:  $name"
+    echo "  2) Workspace:     $workspace"
+    echo "  3) SSH alias:     $ssh_alias"
+    echo "  4) SSH key path:  $ssh_key_path"
+    echo "  5) Git user.name: $git_name"
+    echo "  6) Git user.email: $git_email"
+    echo "----------------------------------------"
+
+    # Run validation checks
+    local issues=0
+    echo
+    log_info "Validating configuration..."
+
+    # Check if workspace exists
+    expanded_workspace=$(expand_path "$workspace")
+    if [[ -d "$expanded_workspace" ]]; then
+      log_success "Workspace exists: $expanded_workspace"
+    else
+      log_warn "Workspace does not exist (will be created): $expanded_workspace"
+    fi
+
+    # Check if SSH key exists
+    local expanded_key
+    expanded_key=$(expand_path "$ssh_key_path")
+    if [[ -f "$expanded_key" ]]; then
+      log_success "SSH key exists: $expanded_key"
+    else
+      log_warn "SSH key does not exist (will be generated): $expanded_key"
+    fi
+
+    # Check for duplicate account name
+    local account_id
+    account_id=$(generate_id "$name")
+    if account_exists "$account_id"; then
+      log_error "Account '$name' already exists!"
+      ((issues++))
+    fi
+
+    echo
+    if [[ $issues -gt 0 ]]; then
+      log_warn "Please fix the issues above before continuing."
+      echo
+    fi
+
+    echo "Options:"
+    echo "  [1-6] Edit a field"
+    echo "  [c]   Confirm and save"
+    echo "  [a]   Abort this account"
+    echo
+    read -rp "Your choice: " choice
+
+    case "$choice" in
+      1)
+        read -rp "Account name [$name]: " new_val
+        if [[ -n "$new_val" ]]; then
+          if validate_account_name "$new_val"; then
+            name="$new_val"
+          else
+            log_warn "Invalid name. Use alphanumeric characters, dashes, or underscores."
+          fi
+        fi
+        ;;
+      2)
+        read -rp "Workspace folder [$workspace]: " new_val
+        [[ -n "$new_val" ]] && workspace="$new_val"
+        ;;
+      3)
+        read -rp "SSH alias [$ssh_alias]: " new_val
+        if [[ -n "$new_val" ]]; then
+          if validate_ssh_alias "$new_val"; then
+            ssh_alias="$new_val"
+          else
+            log_warn "Invalid SSH alias. Use alphanumeric characters, dashes, or underscores."
+          fi
+        fi
+        ;;
+      4)
+        read -rp "SSH key path [$ssh_key_path]: " new_val
+        [[ -n "$new_val" ]] && ssh_key_path="$new_val"
+        ;;
+      5)
+        read -rp "Git user.name [$git_name]: " new_val
+        [[ -n "$new_val" ]] && git_name="$new_val"
+        ;;
+      6)
+        read -rp "Git user.email [$git_email]: " new_val
+        if [[ -n "$new_val" ]]; then
+          if validate_email "$new_val"; then
+            git_email="$new_val"
+          else
+            log_warn "Invalid email format."
+          fi
+        fi
+        ;;
+      c|C)
+        if [[ $issues -gt 0 ]]; then
+          log_warn "Cannot confirm with unresolved issues. Please fix them first."
+        else
+          # Set global variables and exit loop
+          ACCOUNT_ID=$(generate_id "$name")
+          ACCOUNT_NAME="$name"
+          ACCOUNT_SSH_ALIAS="$ssh_alias"
+          ACCOUNT_SSH_KEY_PATH="$ssh_key_path"
+          ACCOUNT_WORKSPACE="$workspace"
+          ACCOUNT_GIT_NAME="$git_name"
+          ACCOUNT_GIT_EMAIL="$git_email"
+          return 0
+        fi
+        ;;
+      a|A)
+        log_info "Account setup aborted."
+        return 1
+        ;;
+      *)
+        log_warn "Invalid choice. Please enter 1-6, c, or a."
+        ;;
+    esac
+  done
 }
