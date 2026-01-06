@@ -70,14 +70,32 @@ cmd_current() {
 
   # Verify actual git config in current directory (only if inside a git repo)
   if git rev-parse --git-dir >/dev/null 2>&1; then
+    local has_issues=false
+
+    # Check email configuration
     local actual_email
     actual_email=$(git config user.email 2>/dev/null || echo "")
     if [[ -n "$actual_email" && "$actual_email" != "$git_email" ]]; then
-      log_warn "Git email mismatch detected!"
-      echo "  Expected: $git_email"
-      echo "  Actual:   $actual_email"
+      echo -e "${YELLOW}⚠${NC} Git email mismatch detected!"
+      echo "    Expected: $git_email"
+      echo "    Actual:   $actual_email"
       echo
-      echo "Run 'gas audit --fix' to fix this issue."
+      has_issues=true
+    fi
+
+    # Check remote URL (should use SSH alias, not github.com directly)
+    local origin_url
+    origin_url=$(git remote get-url origin 2>/dev/null || echo "")
+    if [[ -n "$origin_url" && "$origin_url" == *"github.com"* && "$origin_url" != *"$ssh_alias"* ]]; then
+      echo -e "${YELLOW}⚠${NC} Remote URL uses github.com instead of SSH alias!"
+      echo "    Expected host: $ssh_alias"
+      echo "    Actual URL:    $origin_url"
+      echo
+      has_issues=true
+    fi
+
+    if [[ "$has_issues" == true ]]; then
+      echo "Run 'gas audit --fix' to fix these issues."
     fi
   fi
 }
