@@ -22,7 +22,34 @@ A CLI tool for managing multiple GitHub accounts with automatic identity switchi
 - Git 2.13+ (for conditional includes)
 - jq (JSON processor)
 
-## Install
+## Installation
+
+### Quick Install (curl)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/luongnv89/git-auto-switch/main/install-curl.sh | bash
+```
+
+To uninstall:
+```bash
+curl -fsSL https://raw.githubusercontent.com/luongnv89/git-auto-switch/main/install-curl.sh | bash -s uninstall
+```
+
+### pip / uv
+
+```bash
+pip install git-auto-switch
+# or
+uv pip install git-auto-switch
+```
+
+### npm
+
+```bash
+npm install -g git-auto-switch
+```
+
+### From Source
 
 ```bash
 git clone https://github.com/luongnv89/git-auto-switch.git
@@ -32,7 +59,7 @@ cd git-auto-switch
 brew install jq  # macOS
 # or: sudo apt install jq  # Ubuntu/Debian
 
-# Install CLI globally (optional)
+# Install CLI globally
 make install
 ```
 

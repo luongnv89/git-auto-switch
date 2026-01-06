@@ -21,3 +21,14 @@ test/tmp/
 .env
 .env.local
 CLAUDE.md
+
+# Python build artifacts
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+
+# npm build artifacts
+node_modules/
+*.tgz
