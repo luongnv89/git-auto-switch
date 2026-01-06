@@ -68,14 +68,16 @@ cmd_current() {
   done
   echo
 
-  # Verify actual git config in current directory
-  local actual_email
-  actual_email=$(git config user.email 2>/dev/null || echo "")
-  if [[ -n "$actual_email" && "$actual_email" != "$git_email" ]]; then
-    log_warn "Git email mismatch detected!"
-    echo "  Expected: $git_email"
-    echo "  Actual:   $actual_email"
-    echo
-    echo "Run 'gas audit --fix' to fix this issue."
+  # Verify actual git config in current directory (only if inside a git repo)
+  if git rev-parse --git-dir >/dev/null 2>&1; then
+    local actual_email
+    actual_email=$(git config user.email 2>/dev/null || echo "")
+    if [[ -n "$actual_email" && "$actual_email" != "$git_email" ]]; then
+      log_warn "Git email mismatch detected!"
+      echo "  Expected: $git_email"
+      echo "  Actual:   $actual_email"
+      echo
+      echo "Run 'gas audit --fix' to fix this issue."
+    fi
   fi
 }
