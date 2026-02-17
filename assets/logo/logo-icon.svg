@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- App icon: square with padding -->
+  <rect x="0" y="0" width="128" height="128" rx="24" fill="#0A0A0A"/>
+
+  <!-- Central git commit node -->
+  <circle cx="64" cy="64" r="9" fill="#22C55E"/>
+  <circle cx="64" cy="64" r="5.5" fill="#0A0A0A"/>
+
+  <!-- Top branch node -->
+  <circle cx="64" cy="30" r="6" fill="#FFFFFF"/>
+
+  <!-- Bottom branch node -->
+  <circle cx="64" cy="98" r="6" fill="#FFFFFF"/>
+
+  <!-- Vertical branch line -->
+  <line x1="64" y1="36" x2="64" y2="55" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="64" y1="73" x2="64" y2="92" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Right switching arrow -->
+  <path d="M 73 34 Q 92 34 92 53 Q 92 64 84 64" fill="none" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="84,59 84,69 77,64" fill="#22C55E"/>
+
+  <!-- Left switching arrow -->
+  <path d="M 55 94 Q 36 94 36 75 Q 36 64 44 64" fill="none" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="44,59 44,69 51,64" fill="#22C55E"/>
+</svg>

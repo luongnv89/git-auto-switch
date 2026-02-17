@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 80" width="440" height="80">
+  <!-- Mark -->
+  <g transform="translate(8, 8)">
+    <!-- Central git commit node -->
+    <circle cx="32" cy="32" r="6.5" fill="#22C55E"/>
+    <circle cx="32" cy="32" r="3.8" fill="#000000"/>
+
+    <!-- Top branch node -->
+    <circle cx="32" cy="10" r="4.5" fill="#000000"/>
+
+    <!-- Bottom branch node -->
+    <circle cx="32" cy="54" r="4.5" fill="#000000"/>
+
+    <!-- Vertical branch line -->
+    <line x1="32" y1="14.5" x2="32" y2="25.5" stroke="#000000" stroke-width="2" stroke-linecap="round"/>
+    <line x1="32" y1="38.5" x2="32" y2="49.5" stroke="#000000" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Right switching arrow -->
+    <path d="M 39 13 Q 54 13 54 28 Q 54 32 48 32" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="48,28.5 48,35.5 43,32" fill="#22C55E"/>
+
+    <!-- Left switching arrow -->
+    <path d="M 25 51 Q 10 51 10 36 Q 10 32 16 32" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="16,28.5 16,35.5 21,32" fill="#22C55E"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="82" y="50" font-family="'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace" font-size="28" font-weight="600" fill="#000000" letter-spacing="-0.5">git-auto-switch</text>
+</svg>

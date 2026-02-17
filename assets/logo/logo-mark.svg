@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Git-auto-switch mark: Two rotating arrows around a central git node -->
+
+  <!-- Central git commit node -->
+  <circle cx="64" cy="64" r="10" fill="#22C55E"/>
+  <circle cx="64" cy="64" r="6" fill="#000000"/>
+
+  <!-- Top branch node -->
+  <circle cx="64" cy="28" r="7" fill="#000000"/>
+
+  <!-- Bottom branch node -->
+  <circle cx="64" cy="100" r="7" fill="#000000"/>
+
+  <!-- Vertical branch line -->
+  <line x1="64" y1="35" x2="64" y2="54" stroke="#000000" stroke-width="3" stroke-linecap="round"/>
+  <line x1="64" y1="74" x2="64" y2="93" stroke="#000000" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Right switching arrow (clockwise, top to right) -->
+  <path d="M 74 32 Q 96 32 96 54 Q 96 64 88 64" fill="none" stroke="#22C55E" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="88,58 88,70 80,64" fill="#22C55E"/>
+
+  <!-- Left switching arrow (clockwise, bottom to left) -->
+  <path d="M 54 96 Q 32 96 32 74 Q 32 64 40 64" fill="none" stroke="#22C55E" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="40,58 40,70 48,64" fill="#22C55E"/>
+</svg>
