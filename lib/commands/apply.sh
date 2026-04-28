@@ -88,7 +88,7 @@ apply_to_current_repo() {
   local account
   account=$(get_account_by_id_or_alias "$key")
   if [[ -z "$account" ]]; then
-    die "No account matches '$key' (by id or ssh_alias). Run 'git-auto-switch list' to see available accounts."
+    die "Account '$key' not found (looked up by id and ssh_alias). Run 'git-auto-switch list' to see available accounts."
   fi
 
   if ! git rev-parse --git-dir >/dev/null 2>&1; then
