@@ -1,6 +1,6 @@
 {
   "name": "git-auto-switch",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Manage multiple GitHub accounts with automatic identity switching based on workspace folders",
   "main": "index.js",
   "bin": {

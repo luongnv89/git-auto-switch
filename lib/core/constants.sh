@@ -2,7 +2,7 @@
 # Core constants for git-auto-switch
 
 # Version
-readonly GAS_VERSION="0.1.0"
+readonly GAS_VERSION="0.2.0"
 
 # Paths
 readonly CONFIG_DIR="$HOME/.git-auto-switch"
