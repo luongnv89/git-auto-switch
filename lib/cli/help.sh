@@ -18,7 +18,8 @@ COMMANDS:
   add         Add a new account
   remove [id] Remove an account (interactive if no ID provided)
   list        List all configured accounts
-  apply       Apply configuration to system (SSH, Git, hooks)
+  apply [id]  Apply configuration to system (no id) or a single account
+              to the current repository (id or ssh_alias given)
   validate    Validate configuration and check for issues
   audit       Audit repositories for identity mismatches (--fix to auto-fix)
   current     Show current active account for this directory
@@ -38,8 +39,13 @@ EXAMPLES:
   # List all accounts
   git-auto-switch list
 
-  # Apply configuration after changes
+  # Apply configuration after changes (system-wide)
   git-auto-switch apply
+
+  # Apply a specific account to the current repository only
+  # (argument may be the account id or its ssh_alias)
+  cd ~/some/repo
+  git-auto-switch apply gh-work
 
   # Check for issues
   git-auto-switch validate
