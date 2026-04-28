@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `gas apply <id|ssh_alias>` applies a single account's identity to the
+  current repository (sets local user.name/user.email and rewrites the
+  origin remote to use the SSH alias)
 - MIT License
 - Contributing guidelines
 - GitHub Actions CI workflow (ShellCheck + bats tests)

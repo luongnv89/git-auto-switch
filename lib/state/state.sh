@@ -191,6 +191,13 @@ get_account() {
   echo "$STATE_JSON" | jq -r ".accounts[] | select(.id == \"$id\")"
 }
 
+# Get account by ID or SSH alias (matches whichever the user passed in)
+get_account_by_id_or_alias() {
+  local key="$1"
+  echo "$STATE_JSON" | jq --arg key "$key" \
+    '.accounts[] | select(.id == $key or .ssh_alias == $key)'
+}
+
 # Get account by index
 get_account_by_index() {
   local index="$1"

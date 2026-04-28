@@ -107,7 +107,7 @@ gas apply
 | `add` | Add a new account interactively |
 | `remove [id]` | Remove an account |
 | `list` | List all configured accounts |
-| `apply` | Apply configuration to system |
+| `apply [id]` | Apply configuration to system, or a single account (id or ssh_alias) to the current repository |
 | `validate` | Validate configuration and check for issues |
 | `audit [--fix]` | Audit repositories for identity mismatches (--fix to auto-fix) |
 | `current` | Show current active account for this directory (alias: `whoami`) |
@@ -154,6 +154,27 @@ $ gas current
     - ~/workspace/work
     - ~/projects/company
 ```
+
+### Applying an Account to the Current Repository
+
+Configure a single repository to use a specific account, regardless of where
+the repository lives on disk. Useful for one-off repos that sit outside any
+configured workspace, or when you want to override the workspace default.
+
+```bash
+$ cd ~/some/repo
+$ gas apply gh-work       # by SSH alias
+# or
+$ gas apply work          # by account ID
+```
+
+This sets the repository's local `user.name` and `user.email`, ensures
+the SSH host alias is present in `~/.ssh/config`, and rewrites the
+`origin` remote to use the alias (e.g. `git@github.com:user/repo.git` →
+`git@gh-work:user/repo.git`).
+
+Local Git config takes precedence over the global `includeIf` rules, so
+this works for repos inside *and* outside configured workspaces.
 
 ### Fixing Issues
 
