@@ -4,141 +4,107 @@
 
 <p align="center">
   <a href="https://github.com/luongnv89/git-auto-switch/actions/workflows/ci.yml"><img src="https://github.com/luongnv89/git-auto-switch/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://pypi.org/project/git-auto-switch/"><img src="https://img.shields.io/pypi/v/git-auto-switch.svg" alt="PyPI"></a>
+  <a href="https://www.npmjs.com/package/git-auto-switch"><img src="https://img.shields.io/npm/v/git-auto-switch.svg" alt="npm"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
 </p>
 
-<p align="center">A CLI tool for managing multiple GitHub accounts with automatic identity switching based on workspace folders.</p>
+# Stop pushing commits from the wrong GitHub account
 
-## Features
+`gas` switches your Git identity, SSH key, and remote URL per folder — or per
+repo with one command. A pre-commit hook blocks email mismatches before they
+hit `origin`.
 
-- Manage multiple GitHub accounts with separate SSH keys
-- **Multiple workspaces per account** - map several folders to the same identity
-- Automatic Git identity switching based on workspace folders
-- Pre-commit hook to prevent wrong-email commits
-- SSH key validation and GitHub authentication check during setup
-- Audit repositories and auto-fix identity issues
-- Automatic remote URL rewriting (HTTPS to SSH)
-- Show current active account for any directory
+```bash
+cd ~/some/repo
+gas apply work          # local user.email + SSH alias + remote, all set
+```
 
-## Requirements
+[**Install ->**](#install) · [**Commands ->**](#commands) · [**Recipes ->**](#recipes)
 
-- Bash 3.2+
-- Git 2.13+ (for conditional includes)
-- jq (JSON processor)
+## How It Works
 
-## Installation
+```mermaid
+graph LR
+    A[git commit] --> B{In a configured<br/>workspace?}
+    B -->|Yes| C[includeIf picks<br/>the right identity]
+    B -->|No| D[gas apply id<br/>sets it locally]
+    C --> E[Pre-commit hook<br/>verifies email]
+    D --> E
+    E -->|match| F[commit succeeds]
+    E -->|mismatch| G[commit blocked]
+```
 
-### Quick Install (curl)
+| Layer | What `gas` configures |
+|---|---|
+| `~/.ssh/config` | Host aliases like `gh-work`, `gh-personal` -> the right key |
+| `~/.gitconfig` | `includeIf.gitdir:` blocks per workspace |
+| Repo `origin` | Rewrites `git@github.com:` -> `git@gh-work:` |
+| Pre-commit hook | Aborts commits where `user.email` doesn't match the workspace |
+
+## Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/luongnv89/git-auto-switch/main/install-curl.sh | bash
 ```
 
-To uninstall:
-```bash
-curl -fsSL https://raw.githubusercontent.com/luongnv89/git-auto-switch/main/install-curl.sh | bash -s uninstall
-```
-
-### pip / uv
-
 ```bash
 pip install git-auto-switch
-# or
-uv pip install git-auto-switch
 ```
-
-### npm
 
 ```bash
 npm install -g git-auto-switch
 ```
 
-### From Source
-
-```bash
-git clone https://github.com/luongnv89/git-auto-switch.git
-cd git-auto-switch
-
-# Install dependencies
-brew install jq  # macOS
-# or: sudo apt install jq  # Ubuntu/Debian
-
-# Install CLI globally
-make install
-```
-
-## Quick Start
-
-```bash
-# Initialize with your first account
-git-auto-switch init
-# or use the short alias:
-gas init
-
-# Add more accounts
-gas add
-
-# Show current active account
-gas current
-# or:
-gas whoami
-
-# List all configured accounts
-gas list
-
-# Validate configuration
-gas validate
-
-# Audit repositories for identity issues
-gas audit
-
-# Audit and auto-fix issues
-gas audit --fix
-
-# Apply configuration after manual changes
-gas apply
-```
+Requires Bash 3.2+, Git 2.13+, `jq`.
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `init` | Initialize configuration (first-time setup) |
-| `add` | Add a new account interactively |
-| `remove [id]` | Remove an account |
-| `list` | List all configured accounts |
-| `apply [id]` | Apply configuration to system, or a single account (id or ssh_alias) to the current repository |
-| `validate` | Validate configuration and check for issues |
-| `audit [--fix]` | Audit repositories for identity mismatches (--fix to auto-fix) |
-| `current` | Show current active account for this directory (alias: `whoami`) |
-| `help` | Show help message |
-| `version` | Show version |
+| Command | What it does |
+|---|---|
+| `gas init` | First-time setup wizard — adds your first account |
+| `gas add` | Add another account (interactive) |
+| `gas list` | Show all accounts and their workspaces |
+| `gas current` | Show which account is active in the current directory (alias: `whoami`) |
+| `gas apply` | Re-sync all configs (SSH, git, hooks, remotes) system-wide |
+| `gas apply <id\|alias>` | Apply one account to the current repo only |
+| `gas audit` | Scan repos for identity mismatches |
+| `gas audit --fix` | Same, plus auto-correct what it finds |
+| `gas validate` | Check the config for errors (overlapping workspaces, dup aliases, …) |
+| `gas remove <id>` | Drop an account |
+| `gas version` / `gas help` | Self-explanatory |
 
-## How It Works
+## Recipes
 
-1. **SSH Keys**: Uses separate SSH keys for each account (generates ed25519 keys if needed)
-2. **SSH Config**: Adds host aliases (e.g., `gh-work`, `gh-personal`) to `~/.ssh/config`
-3. **Git Config**: Uses `includeIf.gitdir:` to auto-switch identity based on workspace
-4. **Pre-commit Hook**: Validates email before each commit to prevent mistakes
-5. **Remote Rewriting**: Converts `git@github.com` to `git@gh-alias` for proper SSH key usage
+Most workflows are 1-2 commands. The recipes below cover everything most
+users will need.
 
-## Workflow
-
-### Adding a New Account
-
-When you run `gas add`, the tool will:
-
-1. Prompt for account details (name, workspaces, SSH key, Git identity)
-2. Validate SSH key exists and test GitHub authentication
-3. Automatically proceed if validation passes (no manual confirmation needed)
-4. Apply configuration immediately
-5. Ask if you want to add another account
-
-### Checking Current Account
+### Set up your first two accounts
 
 ```bash
-$ gas current
+gas init
+```
 
+Walk through the prompts: account label, workspace folder(s), SSH key path,
+git name, git email. The wizard validates the SSH key and tests GitHub auth
+before saving.
+
+```bash
+gas add
+```
+
+Same prompts for the second account. After this, every repo inside a
+configured workspace uses that account's identity automatically.
+
+### "Which account am I committing as right now?"
+
+```bash
+gas current
+```
+
+Output:
+
+```
 ========================================
   Current Account: work
 ========================================
@@ -147,54 +113,104 @@ $ gas current
   Git Name:    John Doe
   Git Email:   john@company.com
   SSH Alias:   gh-work
-
   Directory:   /home/user/workspace/work/project
-
   Workspaces:
     - ~/workspace/work
     - ~/projects/company
 ```
 
-### Applying an Account to the Current Repository
+Returns nothing if you're outside any configured workspace.
 
-Configure a single repository to use a specific account, regardless of where
-the repository lives on disk. Useful for one-off repos that sit outside any
-configured workspace, or when you want to override the workspace default.
+### Apply an account to a single repo
 
-```bash
-$ cd ~/some/repo
-$ gas apply gh-work       # by SSH alias
-# or
-$ gas apply work          # by account ID
-```
-
-This sets the repository's local `user.name` and `user.email`, ensures
-the SSH host alias is present in `~/.ssh/config`, and rewrites the
-`origin` remote to use the alias (e.g. `git@github.com:user/repo.git` →
-`git@gh-work:user/repo.git`).
-
-Local Git config takes precedence over the global `includeIf` rules, so
-this works for repos inside *and* outside configured workspaces.
-
-### Fixing Issues
-
-The `audit --fix` command automatically fixes:
-- **Email mismatches**: Removes local `user.email` so global `includeIf` takes over
-- **Wrong remotes**: Rewrites `git@github.com` to use the correct SSH alias
+For one-off repos that sit outside any configured workspace, or to override
+the workspace default for one project:
 
 ```bash
-$ gas audit --fix
-
-Issues in: /home/user/workspace/work/repo1
-  Email:
-    Expected: john@company.com
-    Actual:   wrong@email.com
-  Fixed: Removed local user.email (will use global includeIf)
+cd ~/some/repo
+gas apply work
 ```
 
-## Configuration
+Or by SSH alias — both forms work:
 
-Configuration is stored in `~/.git-auto-switch/config.json`:
+```bash
+gas apply gh-work
+```
+
+What it does:
+
+- Sets local `user.name` / `user.email` (no `--global`)
+- Adds the SSH alias to `~/.ssh/config` if it's missing
+- Rewrites `origin` from `git@github.com:` -> `git@gh-work:`
+- Switches the alias if `origin` was already pointing at a different one
+
+Local config wins over `includeIf`, so this works inside or outside any
+workspace.
+
+### Find and fix wrong-identity repos
+
+```bash
+gas audit
+```
+
+Lists every repo whose `user.email` or remote alias doesn't match its
+workspace. Read-only — won't change anything.
+
+```bash
+gas audit --fix
+```
+
+Same scan, but:
+
+- Removes local `user.email` overrides so `includeIf` can take over
+- Rewrites `git@github.com` remotes to use the correct SSH alias
+
+### Clone a new repo under the right account
+
+```bash
+git clone git@gh-work:org/repo.git
+```
+
+Use the SSH alias instead of `github.com` when cloning. If you forget,
+`gas audit --fix` will rewrite it next time.
+
+### Update everything after editing the config by hand
+
+```bash
+gas apply
+```
+
+Re-generates `~/.ssh/config`, `~/.gitconfig` includes, the pre-commit hook,
+and rewrites remotes for every workspace.
+
+## When Things Go Wrong
+
+| Symptom | Command |
+|---|---|
+| Commit rejected with "email mismatch" | `gas current` to see expected, then `gas audit --fix` |
+| Pushed but wrong account got credit | `gas audit` (read-only diagnostic), then fix the remote |
+| `Permission denied (publickey)` | `gas list` -> verify key path, then `ssh -T git@gh-<alias>` |
+| Just want to undo everything | Restore from `~/.git-auto-switch/backup/<timestamp>/` |
+
+## Comparison
+
+| | Manual `git config` | `gas` |
+|---|---|---|
+| Per-repo identity | Edit `.git/config` by hand | `gas apply <id>` |
+| SSH key per account | Hand-crafted `~/.ssh/config` | Generated from one wizard |
+| Wrong-email guard | None | Pre-commit hook (blocks before push) |
+| Audit existing repos | Custom shell script | `gas audit` |
+
+## License
+
+[MIT](LICENSE)
+
+---
+
+<details>
+<summary><b>Configuration file format</b></summary>
+
+State lives in `~/.git-auto-switch/config.json`:
 
 ```json
 {
@@ -216,32 +232,34 @@ Configuration is stored in `~/.git-auto-switch/config.json`:
 }
 ```
 
-## Multiple Workspaces
+Backups are written to `~/.git-auto-switch/backup/<timestamp>/` before
+every change. Restore with:
 
-Each account can have multiple workspace folders. All repositories within any of these folders will use the same Git identity and SSH key.
+```bash
+cp ~/.git-auto-switch/backup/<timestamp>/ssh_config ~/.ssh/config
+```
 
-**Use cases:**
-- Separate folders for different projects under the same account
-- Client work spread across multiple directories
-- Open source contributions in a dedicated folder
+```bash
+cp ~/.git-auto-switch/backup/<timestamp>/gitconfig ~/.gitconfig
+```
 
-**Adding workspaces during setup:**
+</details>
+
+<details>
+<summary><b>Multiple workspaces per account</b></summary>
+
+One account can map to several folders — useful when client work and
+personal projects share an identity but live in different directories.
+
 ```
 Workspace folder [~/workspace/work]: ~/workspace/work
 Add another workspace? (leave empty to continue): ~/projects/company
 Add another workspace? (leave empty to continue):
 ```
 
-**Managing workspaces in the edit menu:**
-```
-Options:
-  [2]   Manage workspaces (add/remove)
+Edit later via `gas` -> option `[2] Manage workspaces`. `gas list`
+shows the full set:
 
-Workspace action: a
-New workspace folder: ~/freelance/client-a
-```
-
-**Example output from `gas list`:**
 ```
 [work] Work Account
   Git:    John Doe <john@company.com>
@@ -252,53 +270,56 @@ New workspace folder: ~/freelance/client-a
     - ~/freelance/client-a
 ```
 
-## Cloning Repositories
+</details>
 
-Always use the SSH alias when cloning:
+<details>
+<summary><b>Install from source</b></summary>
 
 ```bash
-# For work account
-git clone git@gh-work:org/repo.git
-
-# For personal account
-git clone git@gh-personal:user/repo.git
+git clone https://github.com/luongnv89/git-auto-switch.git
+cd git-auto-switch
+brew install jq          # or: sudo apt install jq
+make install
 ```
 
-Existing repositories with `git@github.com` remotes will be automatically rewritten when you run `gas apply` or `gas audit --fix`.
-
-## Rollback
-
-Backups are created automatically before any changes and stored in `~/.git-auto-switch/backup/<timestamp>/`:
+To uninstall a curl-installed copy:
 
 ```bash
-# List backups
-ls ~/.git-auto-switch/backup/
-
-# Restore SSH config
-cp ~/.git-auto-switch/backup/<timestamp>/ssh_config ~/.ssh/config
-
-# Restore Git config
-cp ~/.git-auto-switch/backup/<timestamp>/gitconfig ~/.gitconfig
+curl -fsSL https://raw.githubusercontent.com/luongnv89/git-auto-switch/main/install-curl.sh | bash -s uninstall
 ```
 
-## Development
+</details>
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+<details>
+<summary><b>Development</b></summary>
 
 ```bash
-# Install development dependencies
 brew install shellcheck bats-core jq
-
-# Run linter
-make lint
-
-# Run tests (59 tests)
-make test
-
-# Run both
-make all
 ```
 
-## License
+```bash
+make lint     # ShellCheck
+```
 
-[MIT](LICENSE)
+```bash
+make test     # bats suite (72 tests)
+```
+
+```bash
+make all      # both
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+</details>
+
+<details>
+<summary><b>How identity switching works internally</b></summary>
+
+1. **SSH keys** — separate ed25519 key per account, generated on first run if missing.
+2. **SSH config** — host aliases (`gh-work`, `gh-personal`) routed to the right key in `~/.ssh/config`.
+3. **Git config** — `includeIf.gitdir:` blocks in `~/.gitconfig` switch `user.name` / `user.email` based on the current directory.
+4. **Pre-commit hook** — installed globally; aborts commits when `user.email` doesn't match the workspace's expected email.
+5. **Remote rewriting** — `git@github.com:org/repo.git` is rewritten to `git@gh-<alias>:org/repo.git` so each push uses the right key.
+
+</details>
