@@ -1,4 +1,4 @@
-.PHONY: all lint test test-docker clean check-deps help install
+.PHONY: all lint test test-docker clean check-deps help install coverage
 
 SHELL := /bin/bash
 SCRIPTS := git-auto-switch install.sh $(wildcard lib/**/*.sh)
@@ -68,12 +68,29 @@ uninstall-global:
 clean:
 	@rm -rf test/tmp .bats-run-*
 
+## Coverage: Python via pytest --cov (always); bash via kcov when installed.
+## Graceful skip when kcov is missing so `make coverage` stays green on a
+## clean checkout without kcov (F-TEST-002).
+coverage:
+	@echo "Python coverage (pytest --cov)..."
+	@python3 -m pytest --cov=git_auto_switch --cov-report=term-missing tests/
+	@if command -v kcov >/dev/null 2>&1; then \
+		echo "Bash coverage (kcov)..."; \
+		mkdir -p coverage/kcov; \
+		kcov --include-path=lib,git-auto-switch coverage/kcov bats test/; \
+	else \
+		echo "kcov not installed - skipping bash coverage (exit 0)."; \
+		echo "Install with: sudo apt-get install kcov (Debian/Ubuntu) or: brew install kcov (macOS)"; \
+	fi
+	@echo "See COVERAGE.md for the recorded M3 baseline."
+
 ## Help
 help:
 	@echo "Available targets:"
 	@echo "  make lint       - Run shellcheck on all scripts"
 	@echo "  make test       - Run bats tests"
 	@echo "  make test-docker - Run bats tests in container (no local bats needed)"
+	@echo "  make coverage   - Report coverage (pytest --cov; kcov for bash if installed)"
 	@echo "  make all        - Run lint and test"
 	@echo "  make check-deps - Verify required tools are installed"
 	@echo "  make install    - Install to /usr/local/bin"
