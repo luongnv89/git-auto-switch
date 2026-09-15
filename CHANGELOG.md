@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `prompt_account_info` in `lib/state/account.sh` decomposed into
+  single-responsibility helpers (field prompts, summary renderer, candidate
+  validators, fix-menu state machine); behavior-identical, no function
+  exceeds ~50 lines or 3 nesting levels (#22)
+
 ### Fixed
 - Unified workspace path canonicalization on `expand_path` so `gas current`,
   `gas apply`, and the pre-commit hook agree on every input — workspaces
