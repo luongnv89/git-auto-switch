@@ -1,0 +1,29 @@
+# Pre-commit gates for git-auto-switch (F-CI-003).
+# Install once with: pre-commit install
+# Run on demand with: pre-commit run --all-files
+# Every `repo` rev is pinned; no floating refs.
+
+repos:
+  # Whitespace / file hygiene on all files.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+
+  # Python lint gate: same `ruff check` the CI python job runs.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.4
+    hooks:
+      - id: ruff
+
+  # Shell lint gate: same file set and baseline as `make lint`
+  # (Makefile SCRIPTS: entry point, install.sh, lib/**/*.sh).
+  # test/*.bats is intentionally excluded — shellcheck's bats-aware rules
+  # (e.g. SC2314) disagree with the suite's established style.
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        files: '^(git-auto-switch|install\.sh|lib/.+\.sh)$'
+        args: ["--source-path=lib", "--severity=warning"]
