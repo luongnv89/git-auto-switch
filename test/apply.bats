@@ -229,6 +229,78 @@ setup_test_repo() {
   [ "$local_email" = "john@work.com" ]
 }
 
+setup_ssh_keygen_mock() {
+  export SSH_KEYGEN_ARGS_FILE="$HOME/ssh-keygen-args"
+  rm -f "$SSH_KEYGEN_ARGS_FILE"
+  ssh-keygen() {
+    local prev="" n="__UNSET__" f=""
+    local a
+    for a in "$@"; do
+      if [[ "$prev" == "-N" ]]; then
+        n="$a"
+      fi
+      if [[ "$prev" == "-f" ]]; then
+        f="$a"
+      fi
+      prev="$a"
+    done
+    echo "N=[$n]" >> "$SSH_KEYGEN_ARGS_FILE"
+    if [[ -n "$f" ]]; then
+      mkdir -p "$(dirname "$f")"
+      echo "PRIVATE" > "$f"
+      chmod 600 "$f"
+      echo "ssh-ed25519 FAKE $f" > "$f.pub"
+    fi
+    return 0
+  }
+  export -f ssh-keygen
+}
+
+@test "ensure_ssh_key generates encrypted key when GAS_SSH_PASSPHRASE is set" {
+  create_test_state
+  export GAS_SSH_PASSPHRASE="s3cr3t-pass"
+  unset GAS_NO_PASSPHRASE || true
+  setup_ssh_keygen_mock
+
+  local account
+  account=$(get_account "personal")
+
+  run ensure_ssh_key "$account"
+  [ "$status" -eq 0 ]
+  grep -q "N=\[s3cr3t-pass\]" "$SSH_KEYGEN_ARGS_FILE"
+  [[ "$output" == *"encrypted"* ]]
+}
+
+@test "ensure_ssh_key generates unencrypted key only with explicit --no-passphrase" {
+  create_test_state
+  unset GAS_SSH_PASSPHRASE || true
+  unset GAS_NO_PASSPHRASE || true
+  setup_ssh_keygen_mock
+
+  local account
+  account=$(get_account "personal")
+
+  run ensure_ssh_key "$account" "--no-passphrase"
+  [ "$status" -eq 0 ]
+  grep -q "N=\[\]" "$SSH_KEYGEN_ARGS_FILE"
+  [[ "$output" == *"NENCRYPTED"* ]]
+}
+
+@test "ensure_ssh_key refuses unencrypted key without explicit opt-out when non-interactive" {
+  create_test_state
+  unset GAS_SSH_PASSPHRASE || true
+  unset GAS_NO_PASSPHRASE || true
+  setup_ssh_keygen_mock
+
+  local account
+  account=$(get_account "personal")
+
+  run ensure_ssh_key "$account"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--no-passphrase"* ]]
+  [ ! -f "$SSH_KEYGEN_ARGS_FILE" ]
+}
+
 @test "apply <id> is idempotent when run twice" {
   create_test_state
   save_state

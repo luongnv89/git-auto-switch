@@ -7,14 +7,42 @@ cmd_apply() {
     die "Not initialized. Run 'git-auto-switch init' first."
   fi
 
+  # Parse flags. --no-passphrase explicitly opts out of encrypted-key
+  # creation for any keys generated during this run (logged by ensure_ssh_key).
+  local no_passphrase="false"
+  local target=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --no-passphrase)
+        no_passphrase="true"
+        shift
+        ;;
+      -h|--help)
+        show_help
+        return 0
+        ;;
+      *)
+        if [[ -z "$target" ]]; then
+          target="$1"
+        else
+          die "Unknown argument: $1 (usage: gas apply [--no-passphrase] [id|ssh_alias])"
+        fi
+        shift
+        ;;
+    esac
+  done
+  if [[ "${GAS_NO_PASSPHRASE:-false}" == "true" ]]; then
+    no_passphrase="true"
+  fi
+
   # Validate state before applying
   if ! validate_state; then
     die "Invalid state. Fix errors and try again."
   fi
 
   # If an account ID is given, apply that account to the current repo only.
-  if [[ -n "${1:-}" ]]; then
-    apply_to_current_repo "$1"
+  if [[ -n "$target" ]]; then
+    apply_to_current_repo "$target"
     return $?
   fi
 
@@ -35,8 +63,12 @@ cmd_apply() {
   for ((i=0; i<account_count; i++)); do
     local account
     account=$(get_account_by_index "$i")
-    ensure_ssh_key "$account"
+    ensure_ssh_key "$account" "$no_passphrase"
   done
+
+  # Step 1b: Verify github.com host keys before trusting them.
+  log_info "Verifying github.com SSH host keys..."
+  ensure_github_known_hosts
 
   # Step 2: Apply SSH config
   log_info "Step 2/5: Updating SSH config..."

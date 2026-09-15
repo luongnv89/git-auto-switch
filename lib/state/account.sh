@@ -195,10 +195,15 @@ prompt_account_info() {
       log_success "SSH key exists: $expanded_key"
       ssh_key_exists=true
 
-      # Test SSH authentication with GitHub using this key
+      # Test SSH authentication with GitHub using this key.
+      # First verify github.com host keys against the published fingerprints
+      # (never blindly trust via accept-new); abort the check on mismatch.
       log_info "Testing SSH authentication with GitHub..."
       local ssh_output
-      if ssh_output=$(ssh -i "$expanded_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -T git@github.com 2>&1); then
+      if ! ensure_github_known_hosts; then
+        log_error "Refusing SSH authentication test: github.com host key could not be verified."
+        issues=$((issues + 1))
+      elif ssh_output=$(ssh -i "$expanded_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -T git@github.com 2>&1); then
         # SSH returns 1 on success with GitHub (it's expected)
         ssh_auth_ok=true
       elif echo "$ssh_output" | grep -q "successfully authenticated"; then
