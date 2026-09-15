@@ -20,7 +20,7 @@ Thank you for your interest in contributing!
    ```
 
     Minimum versions: Bash 3.2+, Git 2.13+, bats-core 1.14.0 (pinned, see
-    below), Node >=22, Python >=3.7.
+     below), Node >=22, Python >=3.11.
    Check yours with:
    ```bash
    bash --version && git --version && jq --version
