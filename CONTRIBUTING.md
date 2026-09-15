@@ -19,7 +19,8 @@ Thank you for your interest in contributing!
    sudo apt-get install bash git jq shellcheck bats python3 nodejs
    ```
 
-   Minimum versions: Bash 3.2+, Git 2.13+, Node >=14, Python >=3.7.
+    Minimum versions: Bash 3.2+, Git 2.13+, bats-core 1.14.0 (pinned, see
+    below), Node >=14, Python >=3.7.
    Check yours with:
    ```bash
    bash --version && git --version && jq --version
@@ -28,9 +29,39 @@ Thank you for your interest in contributing!
    ```
 
 3. Verify your setup:
-   ```bash
-   make check-deps
-   ```
+    ```bash
+    make check-deps
+    ```
+
+## Fresh checkout → working suite (recorded)
+
+From a clean checkout, this single sequence ends with `bats test/`
+executing (F-TEST-004):
+
+```bash
+git clone https://github.com/luongnv89/git-auto-switch.git
+cd git-auto-switch
+make check-deps && bats test/
+```
+
+Toolchain pin: **bats-core v1.14.0** everywhere — local install, CI
+(`bats-core/bats-action`), and the `bats/bats:1.14.0` image used by
+`make test-docker` below. Install the pin exactly with:
+
+```bash
+git clone --branch v1.14.0 --depth 1 https://github.com/bats-core/bats-core.git /tmp/bats-core
+sudo /tmp/bats-core/install.sh /usr/local
+# ...or user-local (ensure ~/.local/bin is on your PATH):
+/tmp/bats-core/install.sh ~/.local
+```
+
+No bats and can't install? Run the same suite containerized — only
+Docker is needed (git, jq, and an ssh client are added inside the
+container for you):
+
+```bash
+make test-docker
+```
 
 ## Environment Variables
 
