@@ -2,14 +2,11 @@
 
 load test_helper
 
-# Test current command helper
+# Test current command helper — delegates to the production lookup so the
+# tests exercise the real canonicalizer instead of a copy of it.
 test_find_account_for_directory() {
   local dir="$1"
-  echo "$STATE_JSON" | jq --arg dir "$dir" '
-    [.accounts[] |
-    select(.workspaces[] as $ws | ($dir + "/") | startswith(($ws | gsub("~"; env.HOME)) + "/"))] |
-    first // empty
-  '
+  find_account_by_workspace "$dir"
 }
 
 @test "current finds account for directory inside workspace" {

@@ -18,6 +18,16 @@ load test_helper
   echo "$hook_content" | grep -q ".workspaces\[\]"
 }
 
+@test "generate_pre_commit_hook mirrors expand_path canonicalization" {
+  local hook_content
+  hook_content=$(generate_pre_commit_hook)
+
+  # The standalone hook cannot call expand_path; it must embed the same
+  # canonicalization: anchored leading ~, trailing slashes stripped.
+  echo "$hook_content" | grep -q 'sub("\^~"; env.HOME)'
+  echo "$hook_content" | grep -q 'sub("/+\$"; "")'
+}
+
 @test "generate_pre_commit_hook exits 0 for unmanaged repos" {
   local hook_content
   hook_content=$(generate_pre_commit_hook)

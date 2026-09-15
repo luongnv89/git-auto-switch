@@ -72,3 +72,64 @@ load test_helper
   run validate_state
   [ "$status" -eq 0 ]
 }
+
+@test "workspace lookup agrees with expand_path across sampled paths" {
+  init_state
+  add_account "main" "Main" "gh-main" "$HOME/.ssh/id_main" \
+    '["~/workspace/main"]' "Main User" "main@example.com"
+
+  # Sampled probe paths: ~ and $HOME forms, with and without trailing
+  # slashes, at different depths — each sits inside the stored workspace,
+  # so both canonicalization paths must resolve them to the account.
+  local samples=(
+    "~/workspace/main"
+    "~/workspace/main/"
+    "~/workspace/main/repo"
+    "$HOME/workspace/main/repo"
+    "$HOME/workspace/main/repo/deep/nest/"
+  )
+  local repo account
+  for repo in "${samples[@]}"; do
+    account=$(find_account_by_workspace "$repo")
+    [ -n "$account" ]
+    [ "$(echo "$account" | jq -r '.id')" = "main" ]
+  done
+}
+
+@test "workspace lookup rejects paths outside the workspace" {
+  init_state
+  add_account "main" "Main" "gh-main" "$HOME/.ssh/id_main" \
+    '["~/workspace/main"]' "Main User" "main@example.com"
+
+  local account
+  account=$(find_account_by_workspace "$HOME/workspace/other")
+  [ -z "$account" ]
+
+  # Prefix trap: a sibling sharing the workspace name as a path prefix
+  account=$(find_account_by_workspace "$HOME/workspace/main2/repo")
+  [ -z "$account" ]
+}
+
+@test "workspace stored with a trailing slash still matches" {
+  init_state
+  add_account "trail" "Trail" "gh-trail" "$HOME/.ssh/id_trail" \
+    '["'"$HOME"'/workspace/trail/"]' "Trail User" "trail@example.com"
+
+  local account
+  account=$(find_account_by_workspace "$HOME/workspace/trail/repo")
+  [ -n "$account" ]
+  [ "$(echo "$account" | jq -r '.id')" = "trail" ]
+}
+
+@test "workspace with a mid-path tilde matches literally" {
+  init_state
+  add_account "mid" "Mid" "gh-mid" "$HOME/.ssh/id_mid" \
+    '["/data/~archive"]' "Mid User" "mid@example.com"
+
+  # expand_path only expands a leading ~; the lookup must do the same,
+  # not rewrite ~ in the middle of the stored path.
+  local account
+  account=$(find_account_by_workspace "/data/~archive/repo")
+  [ -n "$account" ]
+  [ "$(echo "$account" | jq -r '.id')" = "mid" ]
+}

@@ -14,6 +14,36 @@ load test_helper
   [ "$result" = "/absolute/path" ]
 }
 
+@test "expand_path strips a trailing slash" {
+  local result
+  result=$(expand_path "$HOME/workspace/")
+  [ "$result" = "$HOME/workspace" ]
+}
+
+@test "expand_path strips repeated trailing slashes" {
+  local result
+  result=$(expand_path "$HOME/workspace///")
+  [ "$result" = "$HOME/workspace" ]
+}
+
+@test "expand_path keeps the root slash" {
+  local result
+  result=$(expand_path "/")
+  [ "$result" = "/" ]
+}
+
+@test "expand_path expands tilde and strips trailing slash together" {
+  local result
+  result=$(expand_path "~/workspace/")
+  [ "$result" = "$HOME/workspace" ]
+}
+
+@test "expand_path leaves a mid-path tilde literal" {
+  local result
+  result=$(expand_path "/data/~archive")
+  [ "$result" = "/data/~archive" ]
+}
+
 @test "validate_email accepts valid emails" {
   run validate_email "user@example.com"
   [ "$status" -eq 0 ]
