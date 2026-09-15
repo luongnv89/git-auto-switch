@@ -3,6 +3,7 @@
 
 import shutil
 from pathlib import Path
+
 from setuptools import setup
 from setuptools.command.build_py import build_py
 

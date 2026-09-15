@@ -38,6 +38,47 @@ jobs:
       - name: Run tests
         run: bats test/
 
+  python:
+    name: Python (ruff + compileall)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install ruff (pinned to match local gate)
+        run: pip install "ruff==0.16.4"
+
+      - name: Ruff check
+        run: ruff check
+
+      - name: Byte-compile shipped Python
+        run: python -m compileall git_auto_switch/
+
+  node:
+    name: Node (syntax + pack)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Syntax-check shipped JS
+        run: |
+          node --check index.js
+          node --check bin/git-auto-switch.js
+
+      - name: Dry-run npm pack
+        run: npm pack --dry-run
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest

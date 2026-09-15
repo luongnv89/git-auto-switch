@@ -58,19 +58,19 @@ def check_command(cmd: str) -> tuple:
 
     try:
         if cmd == "git":
-            result = subprocess.run([cmd, "--version"], capture_output=True, text=True)
+            result = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
             version = result.stdout.strip().replace("git version ", "")
         elif cmd == "jq":
-            result = subprocess.run([cmd, "--version"], capture_output=True, text=True)
+            result = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
             version = result.stdout.strip().replace("jq-", "")
         elif cmd == "bash":
-            result = subprocess.run([cmd, "--version"], capture_output=True, text=True)
+            result = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
             first_line = result.stdout.split("\n")[0]
             version = first_line.split()[3].split("(")[0] if "version" in first_line else "unknown"
         else:
             version = "installed"
         return True, version
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         return True, "unknown"
 
 
@@ -137,13 +137,13 @@ def install_homebrew() -> bool:
         brew_paths = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"]
         for brew_path in brew_paths:
             if Path(brew_path).exists():
-                result = subprocess.run([brew_path, "shellenv"], capture_output=True, text=True)
+                result = subprocess.run([brew_path, "shellenv"], capture_output=True, text=True, check=False)
                 if result.returncode == 0:
                     os.environ["PATH"] = f"{Path(brew_path).parent}:{os.environ.get('PATH', '')}"
                 break
         print_colored(f"  {CHECK} Homebrew installed")
         return True
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         print_colored(f"  {CROSS} Failed to install Homebrew: {e}")
         return False
 
@@ -380,6 +380,7 @@ def main() -> None:
             stdin=sys.stdin,
             stdout=sys.stdout,
             stderr=sys.stderr,
+            check=False,
         )
         sys.exit(result.returncode)
     except FileNotFoundError:

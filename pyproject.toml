@@ -39,6 +39,11 @@ Issues = "https://github.com/luongnv89/git-auto-switch/issues"
 git-auto-switch = "git_auto_switch.cli:main"
 gas = "git_auto_switch.cli:main"
 
+# Lint gate (F-CI-001): `ruff check` runs in CI and pre-commit with ruff's
+# default rule set; target pinned to the lowest supported interpreter.
+[tool.ruff]
+target-version = "py37"
+
 [tool.setuptools]
 include-package-data = true
 
