@@ -303,6 +303,7 @@ make lint     # ShellCheck
 
 ```bash
 make test     # bats suite (72 tests)
+bats test/    # same suite, direct invocation
 ```
 
 ```bash
