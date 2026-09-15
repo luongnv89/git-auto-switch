@@ -188,7 +188,7 @@ get_account_count() {
 # Get account by ID
 get_account() {
   local id="$1"
-  echo "$STATE_JSON" | jq -r ".accounts[] | select(.id == \"$id\")"
+  echo "$STATE_JSON" | jq --arg id "$id" '.accounts[] | select(.id == $id)'
 }
 
 # Get account by ID or SSH alias (matches whichever the user passed in)
@@ -226,6 +226,6 @@ find_account_by_workspace() {
 account_exists() {
   local id="$1"
   local result
-  result=$(echo "$STATE_JSON" | jq -r ".accounts[] | select(.id == \"$id\") | .id")
+  result=$(echo "$STATE_JSON" | jq -r --arg id "$id" '.accounts[] | select(.id == $id) | .id')
   [[ -n "$result" ]]
 }

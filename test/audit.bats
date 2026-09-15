@@ -73,3 +73,56 @@ setup_git_repo() {
   after_email=$(git config --local user.email 2>/dev/null || echo "")
   [ -z "$after_email" ]
 }
+
+@test "audit reports unreadable repo instead of aborting (F-BUG-003)" {
+  create_test_state
+  save_state
+
+  setup_git_repo "$HOME/workspace/personal/good" "wrong@email.com"
+  touch "$HOME/workspace/personal/bad-is-a-file"
+
+  source "$PROJECT_ROOT/lib/commands/audit.sh"
+
+  # Shadow discovery so one entry cannot be entered (cd fails on a file),
+  # exactly like an unreadable repo directory would.
+  find_git_repos() {
+    echo "$HOME/workspace/personal/good"
+    echo "$HOME/workspace/personal/bad-is-a-file"
+  }
+
+  run cmd_audit
+
+  unset -f find_git_repos
+
+  [ "$status" -eq 1 ]
+  # The unreadable entry is reported ...
+  [[ "$output" == *"bad-is-a-file"* ]]
+  [[ "$output" == *"Failed to audit"* ]]
+  # ... and the audit still ran to completion over the good repo
+  [[ "$output" == *"Audit Summary"* ]]
+  [[ "$output" == *"good"* ]]
+}
+
+@test "audit does not abort when it cannot return to previous directory (F-BUG-003)" {
+  create_test_state
+  save_state
+
+  setup_git_repo "$HOME/workspace/personal/repo1" "wrong@email.com"
+
+  source "$PROJECT_ROOT/lib/commands/audit.sh"
+
+  # Delete the cwd so the post-repo `cd` back fails: the old code ran
+  # `exit 1` here and aborted the whole audit without a summary.
+  local doomed="$TEST_TEMP_DIR/doomed-cwd"
+  mkdir -p "$doomed"
+  cd "$doomed"
+  rm -rf "$doomed"
+
+  run cmd_audit
+  cd "$HOME" || true
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Audit Summary"* ]]
+  [[ "$output" == *"repo1"* ]]
+  [[ "$output" == *"Failed to audit"* ]]
+}

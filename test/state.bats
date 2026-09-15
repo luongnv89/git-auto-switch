@@ -107,3 +107,25 @@ load test_helper
   account=$(get_account "personal")
   [ "$(echo "$account" | jq -r '.git_email')" = "john@personal.com" ]
 }
+
+@test "account ID containing double-quote round-trips (F-BUG-001)" {
+  init_state
+  # Bypass add_account validation (IDs are alphanumeric-only at write
+  # time) since the state file is hand-editable; lookups must still cope.
+  local evil_id='we"ird'
+  STATE_JSON=$(echo "$STATE_JSON" | jq --arg id "$evil_id" \
+    '.accounts += [{id: $id, name: "Evil", ssh_alias: "gh-evil", ssh_key_path: "/tmp/id_evil", workspaces: ["/tmp/w"], git_name: "E", git_email: "e@e.com"}]')
+
+  run account_exists "$evil_id"
+  [ "$status" -eq 0 ]
+
+  local account
+  account=$(get_account "$evil_id")
+  [ "$(echo "$account" | jq -r '.id')" = "$evil_id" ]
+
+  # A non-matching ID containing a quote must not match or break the query
+  run account_exists 'no"pe'
+  [ "$status" -eq 1 ]
+
+  [ -z "$(get_account 'no"pe')" ]
+}

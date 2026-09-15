@@ -28,6 +28,7 @@ cmd_audit() {
 
   local total_repos=0
   local issues=0
+  local failed_repos=0
 
   for ((i=0; i<account_count; i++)); do
     local account
@@ -75,7 +76,11 @@ cmd_audit() {
         local current_dir
         current_dir=$(pwd)
 
-        cd "$repo" || continue
+        if ! cd "$repo"; then
+          log_warn "Cannot access repository: $repo (skipping)"
+          ((failed_repos++)) || true
+          continue
+        fi
 
         # Check email configuration
         local repo_email
@@ -133,7 +138,11 @@ cmd_audit() {
           fi
         fi
 
-        cd "$current_dir" || exit 1
+        if ! cd "$current_dir"; then
+          log_warn "Failed to return to directory: $current_dir after auditing $repo"
+          ((failed_repos++)) || true
+          continue
+        fi
       done <<< "$repos"
     done
   done
@@ -145,8 +154,14 @@ cmd_audit() {
   echo "========================================"
   echo "  Total repositories: $total_repos"
   echo "  Issues found: $issues"
+  echo "  Failed to audit: $failed_repos"
 
-  if [[ $issues -gt 0 ]]; then
+  if [[ $failed_repos -gt 0 ]]; then
+    echo
+    log_warn "Failed to audit $failed_repos repo(s)"
+  fi
+
+  if [[ $issues -gt 0 || $failed_repos -gt 0 ]]; then
     echo
     if [[ "$fix_mode" == true ]]; then
       log_success "Fixed $issues issue(s)"
