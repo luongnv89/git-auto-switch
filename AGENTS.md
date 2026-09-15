@@ -16,6 +16,10 @@ invocations.
 ## Layout
 
 - Entry: `git-auto-switch` -> `lib/cli/router.sh` + `lib/cli/help.sh`
+- Launcher bootstrap: `lib/bootstrap.sh` — the single OS/PM detection and
+  dependency-install implementation shared by the npm shim
+  (`bin/git-auto-switch.js`), the pip shim (`git_auto_switch/cli.py`), and
+  `install-curl.sh`
 - Commands: `lib/commands/` (one file per subcommand)
 - Shared: `lib/core/`, `lib/state/`; output: `lib/generators/`,
   `lib/applicators/`
