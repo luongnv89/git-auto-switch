@@ -17,7 +17,7 @@ All recorded in `CONTRIBUTING.md` (source of truth for flags); short list:
 - `make install` — link `git-auto-switch`/`gas` into `~/.local/bin`
 
 Toolchain: Bash 3.2+, Git 2.13+, `jq`, `shellcheck`, `bats-core`,
-Python >=3.7, Node >=22. Install: `brew install bash git jq shellcheck
+Python >=3.11, Node >=22. Install: `brew install bash git jq shellcheck
 bats-core python3 node` (macOS) or `sudo apt-get install bash git jq
 shellcheck bats python3 nodejs` (Debian).
 
