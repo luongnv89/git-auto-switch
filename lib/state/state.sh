@@ -209,17 +209,31 @@ list_account_ids() {
   echo "$STATE_JSON" | jq -r '.accounts[].id'
 }
 
-# Find account by workspace (for pre-commit hook)
+# Find account by workspace (for pre-commit hook and `gas current`)
 find_account_by_workspace() {
   local repo_path="$1"
   local expanded_repo
   expanded_repo=$(expand_path "$repo_path")
 
-  # Find account where repo_path starts with any of the workspaces
-  echo "$STATE_JSON" | jq -r --arg repo "$expanded_repo" '
-    .accounts[] |
-    select(.workspaces[] as $ws | ($repo + "/") | startswith(($ws | gsub("~"; env.HOME)) + "/"))
-  ' | head -n1
+  # Emit one "<account-index>\t<workspace>" pair per stored workspace, then
+  # canonicalize each through expand_path — the same helper apply/audit/
+  # validate use — so this lookup can never diverge from them.
+  local pairs
+  pairs=$(echo "$STATE_JSON" | jq -r '
+    .accounts as $accounts
+    | range(0; $accounts | length) as $i
+    | $accounts[$i].workspaces[]
+    | "\($i)\t\(.)"
+  ')
+
+  local idx ws expanded_ws
+  while IFS=$'\t' read -r idx ws; do
+    expanded_ws=$(expand_path "$ws")
+    if [[ "${expanded_repo}/" == "${expanded_ws}/"* ]]; then
+      echo "$STATE_JSON" | jq ".accounts[$idx]"
+      return 0
+    fi
+  done <<< "$pairs"
 }
 
 # Check if account ID exists

@@ -10,13 +10,11 @@ cmd_current() {
   local current_dir
   current_dir=$(pwd)
 
-  # Find matching account by checking if current dir is inside any workspace
+  # Find matching account by checking if current dir is inside any workspace.
+  # Routes through find_account_by_workspace so this match uses the same
+  # canonicalizer (expand_path) as apply/audit/validate.
   local account
-  account=$(echo "$STATE_JSON" | jq --arg dir "$current_dir" '
-    [.accounts[] |
-    select(.workspaces[] as $ws | ($dir + "/") | startswith(($ws | gsub("~"; env.HOME)) + "/"))] |
-    first // empty
-  ')
+  account=$(find_account_by_workspace "$current_dir")
 
   if [[ -z "$account" || "$account" == "null" ]]; then
     echo

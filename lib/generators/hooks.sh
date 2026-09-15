@@ -29,10 +29,13 @@ if [[ -z "$repo_path" ]]; then
   exit 0
 fi
 
-# Find matching account by workspace
+# Find matching account by workspace. The workspace transform below mirrors
+# expand_path() in lib/core/utils.sh — the standalone hook cannot call it, so
+# keep the two in sync: leading ~ -> $HOME, trailing slashes stripped.
 expected_email=$(jq -r --arg repo "$repo_path" '
   .accounts[] |
-  select(.workspaces[] as $ws | ($repo + "/") | startswith(($ws | gsub("~"; env.HOME)) + "/")) |
+  select(.workspaces[] as $ws | ($repo + "/") | startswith(
+    (($ws | sub("^~"; env.HOME) | sub("/+$"; "")) | if . == "" then "/" else . end) + "/")) |
   .git_email
 ' "$CONFIG_FILE" | head -n1)
 

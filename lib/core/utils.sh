@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 # Common utilities
 
-# Expand ~ to $HOME in paths
+# Canonicalize a path: expand a leading ~ to $HOME and strip trailing slashes.
+# This is the single canonicalizer every workspace/path comparison routes
+# through (state lookup, apply/audit/validate, gas current). The generated
+# pre-commit hook cannot call it, so it embeds a jq mirror — keep the two in
+# sync (see lib/generators/hooks.sh).
 expand_path() {
   local path="$1"
-  echo "${path/#\~/$HOME}"
+  path="${path/#\~/$HOME}"
+  # Drop trailing slashes so "~/ws" and "~/ws/" compare equal; keep "/" itself.
+  while [[ "$path" == */ && "$path" != "/" ]]; do
+    path="${path%/}"
+  done
+  echo "$path"
 }
 
 # Validate email format (basic check)
