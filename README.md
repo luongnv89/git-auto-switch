@@ -44,9 +44,7 @@ graph LR
 
 ## Install
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/luongnv89/git-auto-switch/main/install-curl.sh | bash
-```
+Preferred — package managers first:
 
 ```bash
 pip install git-auto-switch
@@ -55,6 +53,25 @@ pip install git-auto-switch
 ```bash
 npm install -g git-auto-switch
 ```
+
+Curl installer (only when no package manager fits). Download it first so
+you can inspect it, then run with an explicit checksum pin:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/luongnv89/git-auto-switch/main/install-curl.sh -o install-curl.sh
+GAS_CHECKSUM=<sha256-of-the-release-tarball> bash install-curl.sh
+```
+
+Piping (`curl -fsSL .../install-curl.sh | bash`) still works but skips
+pre-run inspection — avoid it when you can.
+
+Verification: the installer downloads the release tarball to a file and
+checks its SHA256 *before* extracting or executing anything. Precedence:
+explicit `--checksum <sha256>` / `GAS_CHECKSUM` first, then a
+`<tarball-url>.sha256` sidecar (override with `GAS_CHECKSUM_URL`). On
+mismatch the download is deleted and the install aborts. With no checksum
+available (e.g. `main` snapshots publish no sidecar) it warns and
+continues — pin `GAS_CHECKSUM` for a verified install.
 
 Requires Bash 3.2+, Git 2.13+, `jq`.
 
