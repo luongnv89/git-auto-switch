@@ -10,13 +10,21 @@ Thank you for your interest in contributing!
    cd git-auto-switch
    ```
 
-2. Install development dependencies:
+2. Install the toolchain (bash, git, jq, shellcheck, bats, python3, node):
    ```bash
    # macOS
-   brew install shellcheck bats-core
+   brew install bash git jq shellcheck bats-core python3 node
 
    # Ubuntu/Debian
-   sudo apt-get install shellcheck bats
+   sudo apt-get install bash git jq shellcheck bats python3 nodejs
+   ```
+
+   Minimum versions: Bash 3.2+, Git 2.13+, Node >=14, Python >=3.7.
+   Check yours with:
+   ```bash
+   bash --version && git --version && jq --version
+   shellcheck --version && bats --version
+   python3 --version && node --version
    ```
 
 3. Verify your setup:
@@ -24,33 +32,64 @@ Thank you for your interest in contributing!
    make check-deps
    ```
 
-## Running Tests
+## Environment Variables
 
-```bash
-# Run all tests
-make test
+No required env vars beyond `HOME`.
 
-# Run specific test file
-bats test/cleanup.bats
+- Runtime state lives under `~/.git-auto-switch/` (config + backups).
+- `make install` targets `~/.local/bin`, so ensure `~/.local/bin` is on
+  your `PATH`. No API keys, tokens, or service URLs are needed for
+  build/test.
 
-# Run with verbose output
-bats --verbose-run test/
-```
+## Build and Test (recorded commands)
 
-## Running Linter
+ ```bash
+ make lint     # ShellCheck on git-auto-switch, install.sh, lib/**/*.sh
+ bats test/    # bats suite
+ make test     # same suite via Make (wraps `bats test/`)
+ make all      # both: lint + test
+ ```
 
-```bash
-make lint
-```
+ ## Running Tests
 
-## Code Style
+ ```bash
+ # Run all tests
+ make test
 
-- Use 2-space indentation
-- Quote variables: `"$var"` not `$var`
-- Use `[[ ]]` for conditionals (bash-specific)
-- Use `read -r` to avoid backslash escaping issues
-- Add comments for non-obvious logic
-- Follow existing patterns in the codebase
+ # Direct equivalent (recorded):
+ bats test/
+
+ # Run specific test file
+ bats test/cleanup.bats
+
+ # Run with verbose output
+ bats --verbose-run test/
+ ```
+
+ ## Running Linter
+
+ ```bash
+ make lint
+ ```
+
+ ## Code Style
+
+ - Use 2-space indentation
+ - Quote variables: `"$var"` not `$var`
+ - Use `[[ ]]` for conditionals (bash-specific)
+ - Use `read -r` to avoid backslash escaping issues
+ - Add comments for non-obvious logic
+ - Follow existing patterns in the codebase
+ - Keep scripts ShellCheck-clean (`make lint` must pass, see `.shellcheckrc`)
+
+ ## Repo Etiquette
+
+ - Bash style: 2-space indent, quoted vars, `[[ ]]`, `read -r`
+   (enforced via `make lint` / ShellCheck).
+ - bats per command: every `gas <command>` has a matching
+   `test/<command>.bats` file; add/update the bats file with the command.
+ - Version triple-source: keep `VERSION`, `package.json` (`version`), and
+   `pyproject.toml` (`project.version`) in sync on every release bump.
 
 ## Pull Request Process
 
