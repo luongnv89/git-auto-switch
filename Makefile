@@ -1,7 +1,11 @@
-.PHONY: all lint test clean check-deps help install
+.PHONY: all lint test test-docker clean check-deps help install
 
 SHELL := /bin/bash
 SCRIPTS := git-auto-switch install.sh $(wildcard lib/**/*.sh)
+
+# Pinned bats version (F-TEST-004): local installs, CI, and the
+# bats/bats image used by `make test-docker` must all agree on this.
+BATS_VERSION ?= 1.14.0
 
 all: lint test
 
@@ -16,12 +20,20 @@ test:
 	@echo "Running tests..."
 	@bats test/
 
+## Testing without a local bats install (containerized fallback).
+## Uses the pinned bats/bats image and adds git, jq, and an ssh client
+## inside the container, so this works from a clean checkout with only
+## Docker installed.
+test-docker:
+	@echo "Running tests in container (bats/bats:$(BATS_VERSION))..."
+	@docker run --rm --entrypoint sh -v "$(CURDIR):/code" -w /code bats/bats:$(BATS_VERSION) -c "apk add --no-cache git jq openssh-client >/dev/null && git config --global --add safe.directory /code && bats test/"
+
 ## Check dependencies
 check-deps:
-	@echo "Checking dependencies..."
-	@command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck not found. Install with: brew install shellcheck"; exit 1; }
-	@command -v bats >/dev/null 2>&1 || { echo "bats not found. Install with: brew install bats-core"; exit 1; }
-	@command -v jq >/dev/null 2>&1 || { echo "jq not found. Install with: brew install jq"; exit 1; }
+	@echo "Checking dependencies (pinned: bats-core v$(BATS_VERSION))..."
+	@command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck not found. Install with: brew install shellcheck (macOS) or: sudo apt-get install shellcheck (Debian/Ubuntu)"; exit 1; }
+	@command -v bats >/dev/null 2>&1 || { echo "bats not found (pinned: bats-core v$(BATS_VERSION)). Install with: brew install bats-core (macOS) or: sudo apt-get install bats (Debian/Ubuntu), or from source: git clone --branch v$(BATS_VERSION) --depth 1 https://github.com/bats-core/bats-core.git. No install? Run the suite containerized instead: make test-docker"; exit 1; }
+	@command -v jq >/dev/null 2>&1 || { echo "jq not found. Install with: brew install jq (macOS) or: sudo apt-get install jq (Debian/Ubuntu)"; exit 1; }
 	@echo "All dependencies installed!"
 
 ## Install to ~/.local/bin (user-local, no sudo needed)
@@ -61,6 +73,7 @@ help:
 	@echo "Available targets:"
 	@echo "  make lint       - Run shellcheck on all scripts"
 	@echo "  make test       - Run bats tests"
+	@echo "  make test-docker - Run bats tests in container (no local bats needed)"
 	@echo "  make all        - Run lint and test"
 	@echo "  make check-deps - Verify required tools are installed"
 	@echo "  make install    - Install to /usr/local/bin"
