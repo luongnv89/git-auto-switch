@@ -345,14 +345,18 @@ fix_menu_edit_alias() {
 fix_menu_edit_key() {
   local new_val
   read -rp "SSH key path [$PROMPT_SSH_KEY_PATH]: " new_val
-  [[ -n "$new_val" ]] && PROMPT_SSH_KEY_PATH="$new_val"
+  if [[ -n "$new_val" ]]; then
+    PROMPT_SSH_KEY_PATH="$new_val"
+  fi
 }
 
 # Fix menu: edit the Git user.name
 fix_menu_edit_git_name() {
   local new_val
   read -rp "Git user.name [$PROMPT_GIT_NAME]: " new_val
-  [[ -n "$new_val" ]] && PROMPT_GIT_NAME="$new_val"
+  if [[ -n "$new_val" ]]; then
+    PROMPT_GIT_NAME="$new_val"
+  fi
 }
 
 # Fix menu: edit the Git user.email
