@@ -30,7 +30,8 @@ def print_colored(msg: str) -> None:
         print(msg)
     else:
         import re
-        clean = re.sub(r'\033\[[0-9;]*m', '', msg)
+
+        clean = re.sub(r"\033\[[0-9;]*m", "", msg)
         print(clean)
 
 
@@ -59,15 +60,25 @@ def check_command(cmd: str) -> tuple:
 
     try:
         if cmd == "git":
-            result = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
+            result = subprocess.run(
+                [cmd, "--version"], capture_output=True, text=True, check=False
+            )
             version = result.stdout.strip().replace("git version ", "")
         elif cmd == "jq":
-            result = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
+            result = subprocess.run(
+                [cmd, "--version"], capture_output=True, text=True, check=False
+            )
             version = result.stdout.strip().replace("jq-", "")
         elif cmd == "bash":
-            result = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
+            result = subprocess.run(
+                [cmd, "--version"], capture_output=True, text=True, check=False
+            )
             first_line = result.stdout.split("\n")[0]
-            version = first_line.split()[3].split("(")[0] if "version" in first_line else "unknown"
+            version = (
+                first_line.split()[3].split("(")[0]
+                if "version" in first_line
+                else "unknown"
+            )
         else:
             version = "installed"
         return True, version
@@ -125,7 +136,9 @@ def get_os_display_name(os_name: str) -> str:
     return names.get(os_name, os_name)
 
 
-HOMEBREW_INSTALL_URL = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+HOMEBREW_INSTALL_URL = (
+    "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+)
 HOMEBREW_INSTALL_HINT = '    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
 
 
@@ -154,7 +167,9 @@ def install_homebrew() -> bool:
         if not download_file(HOMEBREW_INSTALL_URL, script):
             return False
         if not script.is_file() or script.stat().st_size == 0:
-            print_colored(f"  {CROSS} Downloaded Homebrew installer is empty; refusing to run it")
+            print_colored(
+                f"  {CROSS} Downloaded Homebrew installer is empty; refusing to run it"
+            )
             return False
         try:
             subprocess.run(["/bin/bash", str(script)], check=True)
@@ -165,9 +180,13 @@ def install_homebrew() -> bool:
         brew_paths = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"]
         for brew_path in brew_paths:
             if Path(brew_path).exists():
-                result = subprocess.run([brew_path, "shellenv"], capture_output=True, text=True, check=False)
+                result = subprocess.run(
+                    [brew_path, "shellenv"], capture_output=True, text=True, check=False
+                )
                 if result.returncode == 0:
-                    os.environ["PATH"] = f"{Path(brew_path).parent}:{os.environ.get('PATH', '')}"
+                    os.environ["PATH"] = (
+                        f"{Path(brew_path).parent}:{os.environ.get('PATH', '')}"
+                    )
                 break
         print_colored(f"  {CHECK} Homebrew installed")
         return True
@@ -184,13 +203,17 @@ def install_package(pkg_manager: str, package: str) -> bool:
             subprocess.run(["brew", "install", package], check=True)
         elif pkg_manager == "apt":
             subprocess.run(["sudo", "apt-get", "update", "-qq"], check=True)
-            subprocess.run(["sudo", "apt-get", "install", "-y", "-qq", package], check=True)
+            subprocess.run(
+                ["sudo", "apt-get", "install", "-y", "-qq", package], check=True
+            )
         elif pkg_manager == "dnf":
             subprocess.run(["sudo", "dnf", "install", "-y", "-q", package], check=True)
         elif pkg_manager == "yum":
             subprocess.run(["sudo", "yum", "install", "-y", "-q", package], check=True)
         elif pkg_manager == "pacman":
-            subprocess.run(["sudo", "pacman", "-S", "--noconfirm", "--quiet", package], check=True)
+            subprocess.run(
+                ["sudo", "pacman", "-S", "--noconfirm", "--quiet", package], check=True
+            )
         elif pkg_manager == "apk":
             subprocess.run(["sudo", "apk", "add", "--quiet", package], check=True)
         else:
@@ -222,9 +245,15 @@ def check_dependencies() -> list:
 def print_header() -> None:
     """Print header banner."""
     print_colored("")
-    print_colored(f"{BOLD}╔════════════════════════════════════════════════════════════╗{NC}")
-    print_colored(f"{BOLD}║            git-auto-switch                                 ║{NC}")
-    print_colored(f"{BOLD}╚════════════════════════════════════════════════════════════╝{NC}")
+    print_colored(
+        f"{BOLD}╔════════════════════════════════════════════════════════════╗{NC}"
+    )
+    print_colored(
+        f"{BOLD}║            git-auto-switch                                 ║{NC}"
+    )
+    print_colored(
+        f"{BOLD}╚════════════════════════════════════════════════════════════╝{NC}"
+    )
 
 
 def print_section(title: str) -> None:
@@ -395,7 +424,9 @@ def main() -> None:
         still_missing = check_dependencies()
         if still_missing:
             print_colored("")
-            print_colored(f"  {CROSS} Dependencies still missing: {', '.join(still_missing)}")
+            print_colored(
+                f"  {CROSS} Dependencies still missing: {', '.join(still_missing)}"
+            )
             sys.exit(1)
 
         print_success_summary()
