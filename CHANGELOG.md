@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single-responsibility helpers (field prompts, summary renderer, candidate
   validators, fix-menu state machine); behavior-identical, no function
   exceeds ~50 lines or 3 nesting levels (#22)
+- Converged the Node (`bin/git-auto-switch.js`) and Python
+  (`git_auto_switch/cli.py`) launchers plus `install-curl.sh` onto a single
+  dependency bootstrap, `lib/bootstrap.sh` — OS detection, package-manager
+  detection, dependency install flows, and banners now exist in exactly one
+  place (F-CLEAN-002, F-DEAD-002, F-DEAD-004) (#23)
 
 ### Fixed
 - Unified workspace path canonicalization on `expand_path` so `gas current`,
@@ -23,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Generated `core.sshCommand` now quotes the key path (and expands `~`
   first), so accounts whose SSH key path contains spaces produce a working
   gitconfig (#21)
+- `install-curl.sh` no longer exits 1 after a successful install — its EXIT
+  trap referenced a function-local `tmp_dir`, which is unbound under
+  `set -u` once `main` returns (#23)
 
 ## [0.2.0] - 2026-04-28
 
