@@ -54,5 +54,6 @@ include = ["git_auto_switch*"]
 [tool.setuptools.package-data]
 git_auto_switch = [
     "scripts/*",
+    "scripts/lib/*",
     "scripts/lib/**/*",
 ]
