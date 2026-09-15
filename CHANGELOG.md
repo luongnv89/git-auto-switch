@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unified workspace path canonicalization on `expand_path` so `gas current`,
   `gas apply`, and the pre-commit hook agree on every input — workspaces
   stored with a trailing slash or a mid-path `~` now match correctly (#20)
+- Remote rewriting now covers `ssh://git@github.com/...` origins — they are
+  normalized to the same scp-style `git@<alias>:<path>` form as `git@` and
+  `https://` remotes, including `gas apply <id>` alias switching (#21)
+- Generated `core.sshCommand` now quotes the key path (and expands `~`
+  first), so accounts whose SSH key path contains spaces produce a working
+  gitconfig (#21)
 
 ## [0.2.0] - 2026-04-28
 

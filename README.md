@@ -180,7 +180,7 @@ gas audit --fix
 Same scan, but:
 
 - Removes local `user.email` overrides so `includeIf` can take over
-- Rewrites `git@github.com` remotes to use the correct SSH alias
+- Rewrites `git@github.com`, `ssh://git@github.com`, and `https://github.com` remotes to use the correct SSH alias
 
 ### Clone a new repo under the right account
 
