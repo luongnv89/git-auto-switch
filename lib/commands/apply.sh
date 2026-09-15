@@ -181,6 +181,14 @@ apply_to_current_repo() {
     if [[ "$current_host" != "$ssh_alias" ]]; then
       git -C "$repo_root" remote set-url origin "git@github.com:${BASH_REMATCH[2]}"
     fi
+  elif [[ -n "$origin_url" && "$origin_url" =~ ^ssh://git@([a-zA-Z0-9_-]+)/(.*)$ ]]; then
+    # Same normalization for ssh:// remotes already pointing at some alias:
+    # ssh://git@<alias>/path -> git@github.com:path so the shared rewriter
+    # emits the canonical scp-style form. The host class excludes '.', so
+    # ssh://git@github.com/... never matches and is handled by the rewriter.
+    if [[ "${BASH_REMATCH[1]}" != "$ssh_alias" ]]; then
+      git -C "$repo_root" remote set-url origin "git@github.com:${BASH_REMATCH[2]}"
+    fi
   fi
   rewrite_repo_remotes "$repo_root" "$ssh_alias"
 

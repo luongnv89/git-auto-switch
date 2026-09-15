@@ -59,6 +59,37 @@ setup_git_repo_with_remote() {
   [ "$new_url" = "git@gh-personal:user/repo" ]
 }
 
+@test "rewrite_repo_remotes converts ssh:// remote to SSH alias" {
+  create_test_state
+  save_state
+
+  setup_git_repo_with_remote "$HOME/workspace/personal/repo1" "ssh://git@github.com/user/repo.git"
+
+  cd "$HOME/workspace/personal/repo1"
+
+  rewrite_repo_remotes "$HOME/workspace/personal/repo1" "gh-personal"
+
+  local new_url
+  new_url=$(git remote get-url origin)
+  [ "$new_url" = "git@gh-personal:user/repo.git" ]
+}
+
+@test "rewrite_repo_remotes skips ssh:// non-github remotes" {
+  create_test_state
+  save_state
+
+  setup_git_repo_with_remote "$HOME/workspace/personal/repo1" "ssh://git@gitlab.com/user/repo.git"
+
+  cd "$HOME/workspace/personal/repo1"
+
+  rewrite_repo_remotes "$HOME/workspace/personal/repo1" "gh-personal"
+
+  local new_url
+  new_url=$(git remote get-url origin)
+  # Should remain unchanged
+  [ "$new_url" = "ssh://git@gitlab.com/user/repo.git" ]
+}
+
 @test "rewrite_repo_remotes skips non-github remotes" {
   create_test_state
   save_state
