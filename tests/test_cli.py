@@ -4,7 +4,10 @@ Covers pure helpers so `pytest --cov` reports a real number (F-TEST-002).
 No network, no installs, no subprocess side effects beyond `--version` probes.
 """
 
+import inspect
+import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 from git_auto_switch import cli
 
@@ -69,3 +72,70 @@ def test_print_colored_strips_ansi_when_not_tty(capsys):
     out = capsys.readouterr().out
     assert "hello" in out
     assert "\033[" not in out
+
+
+def test_no_shell_true_anywhere_in_shim():
+    # F-SEC-001 regression guard: no curl-pipe via shell=True may return.
+    assert "shell=True" not in inspect.getsource(cli)
+
+
+def test_download_file_uses_argv_list_without_shell(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_run(args, **kwargs):
+        calls.append((args, kwargs))
+        assert isinstance(args, list)
+        assert kwargs.get("shell", False) is not True
+        Path(args[args.index("-o") + 1]).write_text("x")
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    dest = tmp_path / "installer.sh"
+    assert cli.download_file("https://example.invalid/i.sh", dest) is True
+    assert calls[0][0][:3] == ["curl", "-fsSL", "https://example.invalid/i.sh"]
+    assert dest.exists()
+
+
+def test_download_file_returns_false_on_failure(monkeypatch, tmp_path):
+    def fake_run(args, **kwargs):
+        raise subprocess.CalledProcessError(6, args)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    assert cli.download_file("https://example.invalid/i.sh", tmp_path / "i.sh") is False
+
+
+def test_install_homebrew_download_verify_exec(monkeypatch, tmp_path):
+    def fake_download(url, dest):
+        assert url == cli.HOMEBREW_INSTALL_URL
+        Path(dest).write_text("#!/bin/bash\necho hi\n")
+        return True
+
+    runs = []
+
+    def fake_run(args, **kwargs):
+        runs.append((args, kwargs))
+        assert isinstance(args, list)
+        assert kwargs.get("shell", False) is not True
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(cli, "download_file", fake_download)
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    assert cli.install_homebrew() is True
+    # Second call executes the downloaded file with bash (no shell=True).
+    assert runs[-1][0][0] == "/bin/bash"
+    assert runs[-1][0][1].endswith("install.sh")
+
+
+def test_install_homebrew_refuses_empty_download(monkeypatch):
+    monkeypatch.setattr(cli, "download_file", lambda url, dest: True)
+
+    def fake_run(args, **kwargs):
+        raise AssertionError("must not execute an unverified installer")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    assert cli.install_homebrew() is False
+
+
+def test_install_homebrew_returns_false_when_download_fails(monkeypatch):
+    monkeypatch.setattr(cli, "download_file", lambda url, dest: False)
+    assert cli.install_homebrew() is False

@@ -6,6 +6,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 # ANSI colors
@@ -124,15 +125,42 @@ def get_os_display_name(os_name: str) -> str:
     return names.get(os_name, os_name)
 
 
-def install_homebrew() -> bool:
-    """Install Homebrew on macOS."""
-    print_colored(f"  {ARROW} Installing Homebrew...")
+HOMEBREW_INSTALL_URL = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+HOMEBREW_INSTALL_HINT = '    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+
+
+def download_file(url: str, dest: Path) -> bool:
+    """Download a URL to dest with curl (argv list, never a shell pipe)."""
     try:
-        subprocess.run(
-            ["/bin/bash", "-c", "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"],
-            shell=True,
-            check=True
-        )
+        subprocess.run(["curl", "-fsSL", url, "-o", str(dest)], check=True)
+    except (OSError, subprocess.SubprocessError) as e:
+        print_colored(f"  {CROSS} Failed to download {url}: {e}")
+        return False
+    return True
+
+
+def install_homebrew() -> bool:
+    """Install Homebrew on macOS via download -> verify -> exec.
+
+    The installer is saved to a temp file first and executed as a file
+    argument to bash, so no network stream is ever piped into a shell and
+    no call site enables shell mode in subprocess (F-SEC-001).
+    """
+    print_colored(f"  {ARROW} Installing Homebrew...")
+    print_colored(f"  {DIM}Prefer the official instructions: https://brew.sh{NC}")
+    tmp_dir = tempfile.mkdtemp(prefix="gas-homebrew-")
+    script = Path(tmp_dir) / "install.sh"
+    try:
+        if not download_file(HOMEBREW_INSTALL_URL, script):
+            return False
+        if not script.is_file() or script.stat().st_size == 0:
+            print_colored(f"  {CROSS} Downloaded Homebrew installer is empty; refusing to run it")
+            return False
+        try:
+            subprocess.run(["/bin/bash", str(script)], check=True)
+        except (OSError, subprocess.SubprocessError) as e:
+            print_colored(f"  {CROSS} Failed to install Homebrew: {e}")
+            return False
         # Add to PATH for current session
         brew_paths = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"]
         for brew_path in brew_paths:
@@ -143,9 +171,8 @@ def install_homebrew() -> bool:
                 break
         print_colored(f"  {CHECK} Homebrew installed")
         return True
-    except (OSError, subprocess.SubprocessError) as e:
-        print_colored(f"  {CROSS} Failed to install Homebrew: {e}")
-        return False
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def install_package(pkg_manager: str, package: str) -> bool:
@@ -262,7 +289,7 @@ def install_dependencies(missing: list, os_name: str, pkg_manager: str) -> bool:
             print_colored(f"  {CROSS} Cannot install dependencies without Homebrew")
             print_colored("")
             print_colored("  Please install manually:")
-            print_colored('    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"')
+            print_colored(HOMEBREW_INSTALL_HINT)
             for dep in missing:
                 print_colored(f"    brew install {dep}")
             return False
