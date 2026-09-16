@@ -73,7 +73,7 @@ uninstall-global:
 
 ## Cleanup
 clean:
-	@rm -rf test/tmp .bats-run-*
+	@rm -rf test/tmp .bats-run-* .coverage coverage.xml coverage
 
 ## Coverage: Python via pytest --cov (always); bash via kcov when installed.
 ## Graceful skip when kcov is missing so `make coverage` stays green on a
