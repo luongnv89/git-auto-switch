@@ -28,3 +28,9 @@ repos:
       - id: shellcheck
         files: '^(git-auto-switch|install-curl\.sh|lib/.+\.sh|scripts/.+\.sh)$'
         args: ["--source-path=lib", "--severity=warning"]
+
+  # Secret scan gate: same gitleaks pass the CI security job runs.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks

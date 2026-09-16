@@ -77,3 +77,13 @@ EOF
   backup_count=$(find "$BACKUP_DIR" -name "ssh_config" 2>/dev/null | wc -l)
   [ "$backup_count" -ge 1 ]
 }
+
+@test "apply_ssh_config enforces 0700 on ~/.ssh" {
+  create_test_state
+  chmod 755 "$HOME/.ssh" # simulate drifted permissions
+
+  apply_ssh_config
+
+  [ "$(file_mode "$HOME/.ssh")" = "700" ]
+  [ "$(file_mode "$SSH_CONFIG")" = "600" ]
+}

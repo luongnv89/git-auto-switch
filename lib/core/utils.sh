@@ -76,9 +76,12 @@ create_backup() {
   local backup_path="$BACKUP_DIR/$timestamp"
 
   mkdir -p "$backup_path"
+  # Backups hold identity config (gitconfig, ssh config) — owner-only.
+  chmod 700 "$CONFIG_DIR" "$BACKUP_DIR" "$backup_path"
 
   if [[ -f "$source" ]]; then
     cp "$source" "$backup_path/$backup_name"
+    chmod 600 "$backup_path/$backup_name"
     log_info "Backed up $source to $backup_path/$backup_name"
   fi
 }

@@ -41,6 +41,11 @@ teardown() {
   fi
 }
 
+# Portable file-mode query: BSD stat (macOS) first, GNU stat (Linux) fallback.
+file_mode() {
+  stat -f '%Lp' "$1" 2>/dev/null || stat -c '%a' "$1"
+}
+
 # Helper to create a test state
 create_test_state() {
   init_state

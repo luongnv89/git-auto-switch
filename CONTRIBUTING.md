@@ -82,6 +82,17 @@ No required env vars beyond `HOME`.
  make all      # all three: lint + test + version-check
  ```
 
+ ## Security Scan
+
+ ```bash
+ make security-scan   # gitleaks over full git history (fails closed)
+ make security-setup  # alias for the same gate
+ ```
+
+ CI runs the same scan in the `security` job on every push and PR, using
+ a pinned, checksum-verified gitleaks binary; `pre-commit install` adds
+ the matching local hook. See `SECURITY.md` for the full posture.
+
  ## Running Tests
 
  ```bash

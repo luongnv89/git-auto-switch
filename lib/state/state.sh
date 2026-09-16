@@ -42,15 +42,19 @@ save_state() {
   require_jq
 
   mkdir -p "$CONFIG_DIR"
+  # State dir holds account identities and key paths — owner-only.
+  chmod 700 "$CONFIG_DIR"
 
   # Update last_applied timestamp
   local timestamp
   timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   STATE_JSON=$(echo "$STATE_JSON" | jq ".metadata.last_applied = \"$timestamp\"")
 
-  # Atomic write via temp file
+  # Atomic write via temp file — 0600 before rename so config.json is
+  # never left world-readable by the umask.
   local tmp_file="$CONFIG_FILE.tmp"
   echo "$STATE_JSON" | jq '.' > "$tmp_file"
+  chmod 600 "$tmp_file"
   mv "$tmp_file" "$CONFIG_FILE"
 
   log_success "State saved to $CONFIG_FILE"

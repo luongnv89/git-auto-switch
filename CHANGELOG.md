@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- CI `security` job running gitleaks over full git history with a pinned,
+  checksum-verified binary; `make security-scan` / `make security-setup`
+  local gate and matching pre-commit hook; `SECURITY.md` policy (#32)
+
 ### Changed
 - `prompt_account_info` in `lib/state/account.sh` decomposed into
   single-responsibility helpers (field prompts, summary renderer, candidate
@@ -45,6 +50,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (~53% faster state validation on a 10-account fixture), and
   `update_account` now allowlists writable fields with type-preserving
   writes so `workspaces` keeps its array type (#24)
+
+### Security
+- Enforce `0700` on `~/.git-auto-switch` (and backup dirs) and `0600` on
+  `config.json` and its backups; enforce `0700` on `~/.ssh` when applying
+  SSH config (#32)
 
 ## [0.2.0] - 2026-04-28
 

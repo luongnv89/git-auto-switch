@@ -237,3 +237,11 @@ load test_helper
   [[ "$output" == *"Skipping SSH authentication test"* ]]
   [[ "$output" != *"Testing SSH authentication with GitHub"* ]]
 }
+
+@test "save_state enforces owner-only permissions on state dir and config" {
+  create_test_state
+  save_state
+
+  [ "$(file_mode "$CONFIG_DIR")" = "700" ]
+  [ "$(file_mode "$CONFIG_FILE")" = "600" ]
+}

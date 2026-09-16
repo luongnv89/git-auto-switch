@@ -87,3 +87,14 @@ load test_helper
   result=$(generate_id "Personal GitHub")
   [ "$result" = "personal-github" ]
 }
+
+@test "create_backup keeps backup dir and copies owner-only" {
+  echo "user.email=x@y.z" > "$HOME/.gitconfig"
+  create_backup "$HOME/.gitconfig" "gitconfig"
+
+  local backup_dir
+  backup_dir=$(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d | head -1)
+  [ -n "$backup_dir" ]
+  [ "$(file_mode "$backup_dir")" = "700" ]
+  [ "$(file_mode "$backup_dir/gitconfig")" = "600" ]
+}

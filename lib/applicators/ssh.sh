@@ -191,8 +191,9 @@ remove_managed_ssh_config() {
 apply_ssh_config() {
   require_jq
 
-  # Ensure .ssh directory exists
+  # Ensure .ssh directory exists with the permissions sshd/ssh expect
   mkdir -p "$HOME/.ssh"
+  chmod 700 "$HOME/.ssh"
   touch "$SSH_CONFIG"
   chmod 600 "$SSH_CONFIG"
 
