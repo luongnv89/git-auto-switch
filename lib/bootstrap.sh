@@ -159,17 +159,11 @@ check_command() {
 get_version() {
   local cmd="$1"
   case "$cmd" in
-    bash)
-      echo "${BASH_VERSION:-unknown}"
-      ;;
     git)
       git --version 2>/dev/null | awk '{print $3}' || echo "unknown"
       ;;
     jq)
       jq --version 2>/dev/null | sed 's/jq-//' || echo "unknown"
-      ;;
-    curl)
-      curl --version 2>/dev/null | head -1 | awk '{print $2}' || echo "unknown"
       ;;
     *)
       echo "unknown"
