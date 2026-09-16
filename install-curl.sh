@@ -18,11 +18,17 @@
 #   3. No checksum found: warn and continue (main-branch snapshots publish
 #      no sidecar). On mismatch the download is deleted and install aborts.
 #
+# Dependency bootstrap: runtime deps (git, jq) are ensured by the extracted
+# tree's lib/bootstrap.sh — the single implementation shared with the npm and
+# pip launchers (F-CLEAN-002). This script keeps only the installer-tool
+# preflight (curl, tar) that must pass before anything can be downloaded.
+#
 # Options (via environment variables):
 #   INSTALL_DIR    - Installation directory (default: ~/.local/bin)
 #   DATA_DIR       - Data directory (default: ~/.local/share/git-auto-switch)
 #   VERSION        - Specific version to install (default: latest)
-#   AUTO_INSTALL   - Auto-install dependencies without prompting (default: false)
+#   AUTO_INSTALL   - Auto-install dependencies without prompting (default: false;
+#                    forced when stdin is not a TTY, e.g. curl | bash)
 #   GAS_CHECKSUM   - Expected SHA256 of the release tarball (default: empty)
 #   GAS_CHECKSUM_URL - Override URL of the .sha256 sidecar file (default: empty)
 #   GAS_DOWNLOAD_URL - Override tarball URL (test hook; default: empty)
@@ -58,8 +64,11 @@ GAS_CHECKSUM="${GAS_CHECKSUM:-}"
 GAS_CHECKSUM_URL="${GAS_CHECKSUM_URL:-}"
 GAS_DOWNLOAD_URL="${GAS_DOWNLOAD_URL:-}"
 
-# Track what we install
-INSTALLED_DEPS=()
+# Directory the release tarball extracted to (set by download_and_extract)
+EXTRACTED_DIR=""
+# Download scratch dir — global so the EXIT trap can still see it after
+# main() returns (a function-local would be unbound under `set -u` there).
+TMP_DIR=""
 
 # ============================================================================
 # Output helpers
@@ -100,374 +109,60 @@ print_info() {
 }
 
 # ============================================================================
-# System detection
+# Installer preflight — tools needed before the repo exists locally
 # ============================================================================
+#
+# These are the installer's own requirements: they fetch and extract the
+# release tarball. The app's runtime dependencies (git, jq) are a different
+# set and are ensured post-extraction by lib/bootstrap.sh — the single
+# implementation of OS detection, package-manager detection, and dependency
+# install flows shared with the npm and pip launchers (F-CLEAN-002).
 
-detect_os() {
-    case "$(uname -s)" in
-        Darwin*)  echo "macos" ;;
-        Linux*)
-            if [[ -f /etc/debian_version ]]; then
-                echo "debian"
-            elif [[ -f /etc/redhat-release ]]; then
-                echo "redhat"
-            elif [[ -f /etc/arch-release ]]; then
-                echo "arch"
-            elif [[ -f /etc/alpine-release ]]; then
-                echo "alpine"
-            else
-                echo "linux"
-            fi
-            ;;
-        *)        echo "unknown" ;;
-    esac
-}
-
-detect_package_manager() {
-    local os="$1"
-    case "$os" in
-        macos)
-            if command -v brew &> /dev/null; then
-                echo "brew"
-            else
-                echo "none"
-            fi
-            ;;
-        debian)  echo "apt" ;;
-        redhat)
-            if command -v dnf &> /dev/null; then
-                echo "dnf"
-            else
-                echo "yum"
-            fi
-            ;;
-        arch)    echo "pacman" ;;
-        alpine)  echo "apk" ;;
-        *)       echo "none" ;;
-    esac
-}
-
-# ============================================================================
-# Dependency checking
-# ============================================================================
-
-check_command() {
-    local cmd="$1"
-    if command -v "$cmd" &> /dev/null; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-get_version() {
-    local cmd="$1"
-    case "$cmd" in
-        bash)
-            echo "${BASH_VERSION:-unknown}"
-            ;;
-        git)
-            git --version 2>/dev/null | awk '{print $3}' || echo "unknown"
-            ;;
-        jq)
-            jq --version 2>/dev/null | sed 's/jq-//' || echo "unknown"
-            ;;
-        curl)
-            curl --version 2>/dev/null | head -1 | awk '{print $2}' || echo "unknown"
-            ;;
-        *)
-            echo "unknown"
-            ;;
-    esac
-}
-
-print_system_status() {
-    print_section "System Status"
-
-    local os
-    os=$(detect_os)
-    local pkg_manager
-    pkg_manager=$(detect_package_manager "$os")
-
-    echo -e "  ${BOLD}Operating System:${NC} $os"
-    echo -e "  ${BOLD}Package Manager:${NC}  $pkg_manager"
-    echo ""
-
-    echo -e "  ${BOLD}Required Dependencies:${NC}"
-    echo ""
-
-    # Check each dependency
-    local all_ok=true
-
-    # Bash (always present if we're running)
-    local bash_version="${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}"
-    if [[ "${BASH_VERSINFO[0]}" -ge 3 ]]; then
-        echo -e "    ${CHECK} bash     ${DIM}v$bash_version (required: 3.2+)${NC}"
-    else
-        echo -e "    ${CROSS} bash     ${DIM}v$bash_version (required: 3.2+)${NC}"
-        all_ok=false
-    fi
-
-    # Git
-    if check_command git; then
-        local git_ver
-        git_ver=$(get_version git)
-        echo -e "    ${CHECK} git      ${DIM}v$git_ver (required: 2.13+)${NC}"
-    else
-        echo -e "    ${CROSS} git      ${DIM}not installed (required: 2.13+)${NC}"
-        all_ok=false
-    fi
-
-    # jq
-    if check_command jq; then
-        local jq_ver
-        jq_ver=$(get_version jq)
-        echo -e "    ${CHECK} jq       ${DIM}v$jq_ver${NC}"
-    else
-        echo -e "    ${CROSS} jq       ${DIM}not installed${NC}"
-        all_ok=false
-    fi
-
-    # curl
-    if check_command curl; then
-        local curl_ver
-        curl_ver=$(get_version curl)
-        echo -e "    ${CHECK} curl     ${DIM}v$curl_ver${NC}"
-    else
-        echo -e "    ${CROSS} curl     ${DIM}not installed${NC}"
-        all_ok=false
-    fi
-
-    echo ""
-
-    if $all_ok; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-get_missing_deps() {
+preflight_installer_tools() {
     local missing=()
-
-    if ! check_command git; then
-        missing+=("git")
-    fi
-
-    if ! check_command jq; then
-        missing+=("jq")
-    fi
-
-    if ! check_command curl; then
-        missing+=("curl")
-    fi
-
-    echo "${missing[*]}"
-}
-
-# ============================================================================
-# Dependency installation
-# ============================================================================
-
-install_homebrew() {
-    print_step "Installing Homebrew..."
-    print_info "Prefer the official instructions at https://brew.sh"
-    local tmp_file
-    tmp_file=$(mktemp)
-    # Download first, then execute the file: never pipe a network stream
-    # straight into a shell (F-SEC-001).
-    if ! curl -fsSL "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" -o "$tmp_file"; then
-        print_error "Failed to download the Homebrew installer"
-        rm -f "$tmp_file"
-        exit 1
-    fi
-    if [[ ! -s "$tmp_file" ]]; then
-        print_error "Downloaded Homebrew installer is empty; refusing to run it"
-        rm -f "$tmp_file"
-        exit 1
-    fi
-    /bin/bash "$tmp_file"
-    rm -f "$tmp_file"
-
-    # Add to PATH for current session
-    if [[ -f /opt/homebrew/bin/brew ]]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-    elif [[ -f /usr/local/bin/brew ]]; then
-        eval "$(/usr/local/bin/brew shellenv)"
-    fi
-}
-
-install_deps_macos() {
-    local deps=("$@")
-
-    if ! check_command brew; then
-        print_warn "Homebrew not found"
+    local tool
+    for tool in curl tar; do
+        if ! command -v "$tool" &> /dev/null; then
+            missing+=("$tool")
+        fi
+    done
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        print_error "The installer requires: ${missing[*]}"
         echo ""
-        read -rp "    Install Homebrew? [Y/n] " response
-        if [[ "$response" =~ ^[Nn] ]]; then
-            print_error "Cannot install dependencies without Homebrew"
-            echo ""
-            echo "    Please install manually (see https://brew.sh):"
-            echo "      /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-            echo "      brew install ${deps[*]}"
-            exit 1
-        fi
-        install_homebrew
+        echo "    Please install them with your system package manager, then retry."
+        exit 1
     fi
-
-    for dep in "${deps[@]}"; do
-        print_step "Installing $dep via Homebrew..."
-        if brew install "$dep"; then
-            print_success "Installed $dep"
-            INSTALLED_DEPS+=("$dep")
-        else
-            print_error "Failed to install $dep"
-            exit 1
-        fi
-    done
 }
 
-install_deps_apt() {
-    local deps=("$@")
+# Ensure runtime deps via the downloaded tree's shared bootstrap. Runs as a
+# subprocess so the launchers and this installer execute the same code.
+ensure_runtime_deps() {
+    local src_dir="$1"
+    local bootstrap="$src_dir/lib/bootstrap.sh"
 
-    print_step "Updating package lists..."
-    sudo apt-get update -qq
+    print_section "Checking Dependencies"
 
-    for dep in "${deps[@]}"; do
-        print_step "Installing $dep via apt..."
-        if sudo apt-get install -y -qq "$dep"; then
-            print_success "Installed $dep"
-            INSTALLED_DEPS+=("$dep")
-        else
-            print_error "Failed to install $dep"
-            exit 1
-        fi
-    done
-}
-
-install_deps_dnf() {
-    local deps=("$@")
-
-    for dep in "${deps[@]}"; do
-        print_step "Installing $dep via dnf..."
-        if sudo dnf install -y -q "$dep"; then
-            print_success "Installed $dep"
-            INSTALLED_DEPS+=("$dep")
-        else
-            print_error "Failed to install $dep"
-            exit 1
-        fi
-    done
-}
-
-install_deps_yum() {
-    local deps=("$@")
-
-    for dep in "${deps[@]}"; do
-        print_step "Installing $dep via yum..."
-        if sudo yum install -y -q "$dep"; then
-            print_success "Installed $dep"
-            INSTALLED_DEPS+=("$dep")
-        else
-            print_error "Failed to install $dep"
-            exit 1
-        fi
-    done
-}
-
-install_deps_pacman() {
-    local deps=("$@")
-
-    for dep in "${deps[@]}"; do
-        print_step "Installing $dep via pacman..."
-        if sudo pacman -S --noconfirm --quiet "$dep"; then
-            print_success "Installed $dep"
-            INSTALLED_DEPS+=("$dep")
-        else
-            print_error "Failed to install $dep"
-            exit 1
-        fi
-    done
-}
-
-install_deps_apk() {
-    local deps=("$@")
-
-    for dep in "${deps[@]}"; do
-        print_step "Installing $dep via apk..."
-        if sudo apk add --quiet "$dep"; then
-            print_success "Installed $dep"
-            INSTALLED_DEPS+=("$dep")
-        else
-            print_error "Failed to install $dep"
-            exit 1
-        fi
-    done
-}
-
-install_dependencies() {
-    local missing
-    missing=$(get_missing_deps)
-
-    if [[ -z "$missing" ]]; then
+    if [[ ! -f "$bootstrap" ]]; then
+        # Version skew guard: a pinned older tarball predates the shared
+        # bootstrap — warn rather than silently skip the check.
+        print_warn "Dependency bootstrap not found in the downloaded package"
+        print_info "Ensure git and jq are installed before running gas"
         return 0
     fi
 
-    # Convert to array
-    local deps
-    read -ra deps <<< "$missing"
-
-    local os
-    os=$(detect_os)
-    local pkg_manager
-    pkg_manager=$(detect_package_manager "$os")
-
-    print_section "Installation Plan"
-
-    echo -e "  ${BOLD}Missing dependencies:${NC} ${deps[*]}"
-    echo ""
-
-    if [[ "$pkg_manager" == "none" ]]; then
-        print_error "No supported package manager found"
-        echo ""
-        echo "    Please install the following manually:"
-        for dep in "${deps[@]}"; do
-            echo "      - $dep"
-        done
-        exit 1
+    # A piped install (curl | bash) has no stdin to prompt on — proceed
+    # without asking, matching this script's previous empty-answer behavior.
+    local auto_install="$AUTO_INSTALL"
+    if [[ ! -t 0 ]]; then
+        auto_install="true"
     fi
 
-    echo -e "  ${BOLD}Actions to perform:${NC}"
-    for dep in "${deps[@]}"; do
-        echo -e "    ${ARROW} Install $dep using $pkg_manager"
-    done
-    echo -e "    ${ARROW} Download git-auto-switch"
-    echo -e "    ${ARROW} Install to $INSTALL_DIR"
-    echo ""
-
-    # Prompt for confirmation unless AUTO_INSTALL is true
-    if [[ "$AUTO_INSTALL" != "true" ]]; then
-        read -rp "  Proceed with installation? [Y/n] " response
-        if [[ "$response" =~ ^[Nn] ]]; then
-            echo ""
-            print_warn "Installation cancelled"
-            exit 0
-        fi
-    fi
-
-    print_section "Installing Dependencies"
-
-    case "$pkg_manager" in
-        brew)   install_deps_macos "${deps[@]}" ;;
-        apt)    install_deps_apt "${deps[@]}" ;;
-        dnf)    install_deps_dnf "${deps[@]}" ;;
-        yum)    install_deps_yum "${deps[@]}" ;;
-        pacman) install_deps_pacman "${deps[@]}" ;;
-        apk)    install_deps_apk "${deps[@]}" ;;
-        *)
-            print_error "Unsupported package manager: $pkg_manager"
-            exit 1
-            ;;
+    local rc=0
+    AUTO_INSTALL="$auto_install" bash "$bootstrap" --ensure || rc=$?
+    case "$rc" in
+        0) return 0 ;;
+        2) exit 0 ;;  # user cancelled the dependency install
+        *) exit 1 ;;
     esac
 }
 
@@ -545,7 +240,11 @@ download_and_verify() {
 
 get_latest_version() {
     local latest
-    latest=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null | jq -r '.tag_name // empty')
+    # Parsed without jq: jq is an app dependency ensured later, while this
+    # runs before the download — falling back to "main" on a missing jq would
+    # silently change which version gets installed.
+    latest=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
+        | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)
 
     if [[ -z "$latest" ]]; then
         echo "main"
@@ -554,12 +253,11 @@ get_latest_version() {
     fi
 }
 
-install_git_auto_switch() {
+# Download, checksum-verify, and extract the release into $tmp_dir; sets
+# EXTRACTED_DIR to the extracted repo root.
+download_and_extract() {
     local version="$1"
-    local tmp_dir
-
-    tmp_dir=$(mktemp -d)
-    trap 'rm -rf "$tmp_dir"' EXIT
+    local tmp_dir="$2"
 
     print_section "Installing git-auto-switch"
 
@@ -569,7 +267,6 @@ install_git_auto_switch() {
         download_url="$GAS_DOWNLOAD_URL"
     elif [[ "$version" == "main" || "$version" == "latest" ]]; then
         download_url="https://github.com/$REPO/archive/refs/heads/main.tar.gz"
-        version="main"
     else
         download_url="https://github.com/$REPO/archive/refs/tags/$version.tar.gz"
     fi
@@ -592,13 +289,17 @@ install_git_auto_switch() {
     fi
 
     # Find extracted directory
-    local src_dir
-    src_dir=$(find "$tmp_dir" -maxdepth 1 -type d -name "git-auto-switch*" | head -1)
+    EXTRACTED_DIR=$(find "$tmp_dir" -maxdepth 1 -type d -name "git-auto-switch*" | head -1)
 
-    if [[ -z "$src_dir" ]]; then
+    if [[ -z "$EXTRACTED_DIR" ]]; then
         print_error "Failed to find extracted directory"
         exit 1
     fi
+}
+
+# Copy the extracted tree into place and create the command symlinks.
+install_files() {
+    local src_dir="$1"
 
     # Create directories
     print_step "Creating directories..."
@@ -657,11 +358,6 @@ print_final_summary() {
 
     echo -e "  ${BOLD}What was installed:${NC}"
     echo ""
-
-    # Dependencies
-    if [[ ${#INSTALLED_DEPS[@]} -gt 0 ]]; then
-        echo -e "    ${CHECK} Dependencies: ${INSTALLED_DEPS[*]}"
-    fi
 
     # Main app
     echo -e "    ${CHECK} git-auto-switch v$version"
@@ -789,36 +485,30 @@ main() {
 
     print_header
 
-    # Phase 1: Check system status
-    if ! print_system_status; then
-        # Phase 2: Install missing dependencies
-        install_dependencies
+    # Phase 1: Installer preflight — curl and tar fetch/extract the release;
+    # the app's own deps come later from the shared bootstrap.
+    preflight_installer_tools
 
-        # Verify dependencies are now available
-        echo ""
-        print_step "Verifying dependencies..."
-        local still_missing
-        still_missing=$(get_missing_deps)
-        if [[ -n "$still_missing" ]]; then
-            print_error "Dependencies still missing: $still_missing"
-            exit 1
-        fi
-        print_success "All dependencies satisfied"
-    else
-        print_success "All dependencies satisfied"
-    fi
-
-    # Phase 3: Determine version
+    # Phase 2: Determine version
     local install_version="$VERSION"
     if [[ "$install_version" == "latest" ]]; then
         print_step "Checking for latest version..."
         install_version=$(get_latest_version)
     fi
 
-    # Phase 4: Install git-auto-switch
-    install_git_auto_switch "$install_version"
+    # Phase 3: Download, checksum-verify, and extract the release
+    TMP_DIR=$(mktemp -d)
+    trap '[[ -n "${TMP_DIR:-}" ]] && rm -rf "$TMP_DIR"' EXIT
+    download_and_extract "$install_version" "$TMP_DIR"
 
-    # Phase 5: Show summary
+    # Phase 4: Ensure runtime dependencies (git, jq) via the extracted
+    # tree's shared bootstrap — the same code the npm/pip launchers run.
+    ensure_runtime_deps "$EXTRACTED_DIR"
+
+    # Phase 5: Install files and create symlinks
+    install_files "$EXTRACTED_DIR"
+
+    # Phase 6: Show summary
     # Get actual version from installed script
     local actual_version
     actual_version=$("$INSTALL_DIR/git-auto-switch" version 2>/dev/null | awk '{print $NF}' || echo "$install_version")
