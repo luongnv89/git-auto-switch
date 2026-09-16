@@ -73,7 +73,8 @@ def test_main_delegates_to_shared_bootstrap(monkeypatch):
 
 def test_main_propagates_cli_exit_code(monkeypatch):
     monkeypatch.setattr(
-        cli.subprocess, "run",
+        cli.subprocess,
+        "run",
         lambda *a, **k: SimpleNamespace(returncode=7),
     )
     with pytest.raises(SystemExit) as exc:
@@ -122,9 +123,13 @@ def test_main_exits_on_permission_error(monkeypatch, capsys):
 def test_launcher_has_no_detection_or_install_logic():
     # F-CLEAN-002 convergence guard: the shim must not grow a second copy.
     src = inspect.getsource(cli)
-    for banned in ("def detect_os", "def detect_package_manager",
-                   "def install_homebrew", "def install_package",
-                   "def check_dependencies"):
+    for banned in (
+        "def detect_os",
+        "def detect_package_manager",
+        "def install_homebrew",
+        "def install_package",
+        "def check_dependencies",
+    ):
         assert banned not in src
 
 

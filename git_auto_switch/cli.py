@@ -25,7 +25,7 @@ def print_colored(msg: str) -> None:
     if sys.stdout.isatty():
         print(msg)
     else:
-        clean = re.sub(r'\033\[[0-9;]*m', '', msg)
+        clean = re.sub(r"\033\[[0-9;]*m", "", msg)
         print(clean)
 
 
@@ -72,9 +72,7 @@ def main() -> None:
     """Delegate to the shared bootstrap, which ensures dependencies and execs the CLI."""
     script_path = get_script_path()
     if script_path is None:
-        print_script_not_found(
-            Path(__file__).parent / "scripts" / "git-auto-switch"
-        )
+        print_script_not_found(Path(__file__).parent / "scripts" / "git-auto-switch")
         sys.exit(1)
 
     bootstrap_path = get_bootstrap_path(script_path)
