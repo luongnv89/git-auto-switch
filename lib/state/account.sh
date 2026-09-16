@@ -84,7 +84,9 @@ remove_account() {
   log_success "Removed account: $id"
 }
 
-# Update account field
+# Update account field — allowlisted fields only, with type-preserving
+# writes (F-BUG-002): scalar fields stay strings via --arg, workspaces takes
+# a JSON array via --argjson so the array type survives the write.
 update_account() {
   local id="$1"
   local field="$2"
@@ -96,11 +98,27 @@ update_account() {
     die "Account with ID '$id' does not exist"
   fi
 
-  STATE_JSON=$(echo "$STATE_JSON" | jq \
-    --arg id "$id" \
-    --arg field "$field" \
-    --arg value "$value" \
-    '(.accounts[] | select(.id == $id))[$field] = $value')
+  case "$field" in
+    name|ssh_alias|ssh_key_path|git_name|git_email)
+      STATE_JSON=$(echo "$STATE_JSON" | jq \
+        --arg id "$id" \
+        --arg field "$field" \
+        --arg value "$value" \
+        '(.accounts[] | select(.id == $id))[$field] = $value')
+      ;;
+    workspaces)
+      if ! echo "$value" | jq -e 'type == "array"' >/dev/null 2>&1; then
+        die "Field 'workspaces' requires a JSON array value"
+      fi
+      STATE_JSON=$(echo "$STATE_JSON" | jq \
+        --arg id "$id" \
+        --argjson value "$value" \
+        '(.accounts[] | select(.id == $id)).workspaces = $value')
+      ;;
+    *)
+      die "Cannot update field '$field' (allowed: name, ssh_alias, ssh_key_path, git_name, git_email, workspaces)"
+      ;;
+  esac
 
   log_success "Updated $field for account: $id"
 }

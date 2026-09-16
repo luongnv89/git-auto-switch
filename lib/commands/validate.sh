@@ -38,14 +38,9 @@ cmd_validate() {
 
   # Validate each account
   for ((i=0; i<account_count; i++)); do
-    local account
-    account=$(get_account_by_index "$i")
-
-    local id name ssh_alias ssh_key_path
-    id=$(echo "$account" | jq -r '.id')
-    name=$(echo "$account" | jq -r '.name')
-    ssh_alias=$(echo "$account" | jq -r '.ssh_alias')
-    ssh_key_path=$(echo "$account" | jq -r '.ssh_key_path')
+    # Single jq projection: all fields + workspaces in one call (F-PERF-003)
+    read_account_fields "$i"
+    local id="$ACCT_ID" name="$ACCT_NAME" ssh_alias="$ACCT_SSH_ALIAS" ssh_key_path="$ACCT_SSH_KEY_PATH"
 
     echo
     log_info "Validating account: $name ($id)"
@@ -78,11 +73,9 @@ cmd_validate() {
     fi
 
     # Check all workspaces for this account
-    local workspaces_count
-    workspaces_count=$(echo "$account" | jq '.workspaces | length')
+    local workspaces_count=${#ACCT_WORKSPACES[@]}
     for ((j=0; j<workspaces_count; j++)); do
-      local workspace
-      workspace=$(echo "$account" | jq -r ".workspaces[$j]")
+      local workspace="${ACCT_WORKSPACES[$j]}"
 
       # Check workspace directory
       local expanded_workspace
@@ -106,6 +99,9 @@ cmd_validate() {
     # Test SSH connection (optional, network dependent)
     read -rp "  Test SSH connection for $name? [y/N] " test_ssh
     if [[ "$test_ssh" == "y" || "$test_ssh" == "Y" ]]; then
+      # Fetch the full account JSON only when the user opts into the SSH test
+      local account
+      account=$(get_account_by_index "$i")
       if validate_ssh_connection "$account"; then
         log_success "SSH connection successful"
       else
