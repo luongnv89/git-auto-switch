@@ -256,7 +256,14 @@ check_prompt_ssh_key() {
 
   log_success "SSH key exists: $expanded_key"
 
-  # Test SSH authentication with GitHub using this key.
+  # Test SSH authentication with GitHub using this key — only on an
+  # interactive terminal. The live check can block on passphrase or
+  # host-key prompts, so a non-TTY stdin (scripted setup) skips it.
+  if [[ ! -t 0 ]]; then
+    log_info "Skipping SSH authentication test (non-interactive stdin)"
+    return 0
+  fi
+
   # First verify github.com host keys against the published fingerprints
   # (never blindly trust via accept-new); abort the check on mismatch.
   log_info "Testing SSH authentication with GitHub..."

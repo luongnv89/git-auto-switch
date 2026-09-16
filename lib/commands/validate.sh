@@ -2,6 +2,32 @@
 # Validate configuration
 
 cmd_validate() {
+  # Optional flags:
+  #   --check-ssh  run the SSH connection test without prompting
+  #   --yes, -y    assume "yes" for optional prompts (runs the SSH test)
+  #   --no-prompt  never prompt; skip optional interactive checks
+  local check_ssh=false
+  local assume_yes=false
+  local no_prompt=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --check-ssh)
+        check_ssh=true
+        ;;
+      --yes|-y)
+        assume_yes=true
+        ;;
+      --no-prompt)
+        no_prompt=true
+        ;;
+      *)
+        die "Unknown option for 'validate': $1 (supported: --check-ssh, --yes, --no-prompt)"
+        ;;
+    esac
+    shift
+  done
+
   # Check if initialized
   if ! load_state; then
     die "Not initialized. Run 'git-auto-switch init' first."
@@ -96,8 +122,17 @@ cmd_validate() {
       fi
     done
 
-    # Test SSH connection (optional, network dependent)
-    read -rp "  Test SSH connection for $name? [y/N] " test_ssh
+    # Test SSH connection (optional, network dependent). Only prompt on an
+    # interactive terminal: a non-TTY stdin (CI, scripts, </dev/null) skips
+    # the test deterministically unless --check-ssh/--yes opts in.
+    local test_ssh=""
+    if [[ "$check_ssh" == true || "$assume_yes" == true ]]; then
+      test_ssh="y"
+    elif [[ "$no_prompt" == true ]] || [[ ! -t 0 ]]; then
+      log_info "Skipping SSH connection test for $name (non-interactive; pass --check-ssh to run it)"
+    else
+      read -rp "  Test SSH connection for $name? [y/N] " test_ssh
+    fi
     if [[ "$test_ssh" == "y" || "$test_ssh" == "Y" ]]; then
       # Fetch the full account JSON only when the user opts into the SSH test
       local account

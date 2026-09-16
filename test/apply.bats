@@ -389,3 +389,108 @@ setup_ssh_keygen_mock() {
   # One find(1) invocation total: apply's walk is reused by audit --fix.
   [ "$(find_call_count)" -eq 1 ]
 }
+
+# --- Non-interactive safety (issue #29) ---
+# Since #47, key generation non-interactively requires an explicit
+# unencrypted-key opt-out — GAS_NO_PASSPHRASE=true is the test hook.
+
+@test "ensure_ssh_key </dev/null> generates the key and returns 0 without pausing" {
+  create_test_state
+  export GAS_NO_PASSPHRASE=true
+  local account
+  account=$(get_account_by_index 0)
+
+  run ensure_ssh_key "$account" </dev/null
+  [ "$status" -eq 0 ]
+  [ -f "$HOME/.ssh/id_personal" ]
+  [[ "$output" != *"Press Enter"* ]]
+}
+
+@test "ensure_ssh_key does not block on a held-open non-TTY stdin" {
+  create_test_state
+  export GAS_NO_PASSPHRASE=true
+  local account
+  account=$(get_account_by_index 0)
+
+  run assert_completes_within 15 ensure_ssh_key "$account" < <(sleep 30)
+  [ "$status" -eq 0 ]
+}
+
+@test "cmd_apply </dev/null> completes a full system apply without prompting" {
+  create_test_state
+  export GAS_NO_PASSPHRASE=true
+  save_state
+  setup_apply_command
+
+  run cmd_apply </dev/null
+  [ "$status" -eq 0 ]
+  # A missing key was generated without the interactive pause
+  [ -f "$HOME/.ssh/id_personal" ]
+  [[ "$output" != *"Press Enter"* ]]
+  [[ "$output" == *"Non-interactive mode"* ]]
+  [[ "$output" == *"Configuration applied successfully"* ]]
+}
+
+@test "cmd_apply does not block on a held-open non-TTY stdin" {
+  create_test_state
+  export GAS_NO_PASSPHRASE=true
+  save_state
+  setup_apply_command
+
+  run assert_completes_within 15 cmd_apply < <(sleep 30)
+  [ "$status" -eq 0 ]
+}
+
+@test "cmd_apply --no-prompt completes without the confirmation pause" {
+  create_test_state
+  export GAS_NO_PASSPHRASE=true
+  save_state
+  setup_apply_command
+
+  run cmd_apply --no-prompt
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Press Enter"* ]]
+  [[ "$output" == *"Configuration applied successfully"* ]]
+}
+
+@test "cmd_apply --yes completes without the confirmation pause" {
+  create_test_state
+  export GAS_NO_PASSPHRASE=true
+  save_state
+  setup_apply_command
+
+  run cmd_apply --yes
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Press Enter"* ]]
+  [[ "$output" == *"Configuration applied successfully"* ]]
+}
+
+@test "cmd_apply accepts flags around the positional account key" {
+  create_test_state
+  save_state
+  setup_apply_command
+
+  setup_test_repo "$HOME/some/repo" "git@github.com:user/repo.git"
+  cd "$HOME/some/repo"
+
+  run cmd_apply --yes "personal"
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$HOME/some/repo" config --local --get user.email)" = "john@personal.com" ]
+
+  run cmd_apply "personal" --no-prompt
+  [ "$status" -eq 0 ]
+}
+
+@test "cmd_apply rejects unknown options and extra arguments" {
+  create_test_state
+  save_state
+  setup_apply_command
+
+  run cmd_apply --bogus
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Unknown option"* ]]
+
+  run cmd_apply one two
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Unexpected extra argument"* ]]
+}

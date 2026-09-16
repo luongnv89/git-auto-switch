@@ -76,13 +76,17 @@ ensure_github_known_hosts() {
 }
 
 # Ensure SSH key exists, generate if missing
-# Usage: ensure_ssh_key <account_json> [--no-passphrase|true|false]
+# Usage: ensure_ssh_key <account_json> [--no-passphrase|true|false] [no_prompt]
 # Honors GAS_NO_PASSPHRASE=true and GAS_SSH_PASSPHRASE (non-interactive/test hook).
 # Default posture: prompt for a passphrase; an empty passphrase is rejected
 # unless the caller explicitly opts out with --no-passphrase (logged).
+# Third arg (optional): when "true", never wait on any prompt — used by
+# `apply --yes`/`--no-prompt`. Every prompt is also skipped automatically
+# whenever stdin is not a TTY.
 ensure_ssh_key() {
   local account_json="$1"
   local opt="${2:-false}"
+  local no_prompt="${3:-false}"
 
   local ssh_key_path git_email name
   ssh_key_path=$(echo "$account_json" | jq -r '.ssh_key_path')
@@ -108,7 +112,7 @@ ensure_ssh_key() {
   else
     if [[ -n "${GAS_SSH_PASSPHRASE:-}" ]]; then
       passphrase="$GAS_SSH_PASSPHRASE"
-    elif [[ -t 0 ]]; then
+    elif [[ -t 0 ]] && [[ "$no_prompt" != "true" ]]; then
       read -r -s -p "Enter passphrase for new SSH key [$expanded_path] (empty requires --no-passphrase): " passphrase
       echo
       if [[ -z "$passphrase" ]]; then
@@ -147,11 +151,12 @@ ensure_ssh_key() {
   echo
   cat "${expanded_path}.pub"
   echo
-  # TTY-gated: never block headless runs (F-BUG-008).
-  if [[ -t 0 ]]; then
-    read -rp "Press Enter after adding the key to GitHub..."
+  # Pause only on an interactive terminal — a non-TTY stdin (CI, scripts,
+  # </dev/null) or --yes/--no-prompt must never block on read (F-BUG-008).
+  if [[ "$no_prompt" == "true" ]] || [[ ! -t 0 ]]; then
+    log_info "Non-interactive mode: add the key above to GitHub, then re-run 'gas apply' if needed."
   else
-    log_info "Add the key above to GitHub, then re-run 'gas apply' if needed."
+    read -rp "Press Enter after adding the key to GitHub..."
   fi
 }
 

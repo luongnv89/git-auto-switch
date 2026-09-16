@@ -102,3 +102,78 @@ load test_helper
   run validate_state
   [ "$status" -eq 1 ]
 }
+
+# --- Non-interactive safety (issue #29) ---
+
+setup_validate_command() {
+  source "$PROJECT_ROOT/lib/commands/validate.sh"
+}
+
+@test "cmd_validate </dev/null> completes without emitting the SSH prompt" {
+  create_test_state
+  save_state
+  setup_validate_command
+
+  run cmd_validate </dev/null
+  # Validation runs to its summary even though errors exist (missing key etc.)
+  [[ "$output" == *"Validation"* ]]
+  # The interactive prompt must never be emitted on a non-TTY stdin
+  [[ "$output" != *"Test SSH connection for"* ]]
+  [[ "$output" == *"Skipping SSH connection test"* ]]
+}
+
+@test "cmd_validate does not block on a held-open non-TTY stdin" {
+  create_test_state
+  save_state
+  setup_validate_command
+
+  # stdin is a pipe that stays open for 30s without data: a regression to an
+  # unguarded `read` would hang here; the watchdog bounds the test.
+  run assert_completes_within 10 cmd_validate < <(sleep 30)
+  [ "$status" -eq 0 ]
+}
+
+@test "cmd_validate --no-prompt skips the SSH connection test" {
+  create_test_state
+  save_state
+  setup_validate_command
+
+  run cmd_validate --no-prompt
+  [[ "$output" != *"Test SSH connection for"* ]]
+  [[ "$output" == *"Skipping SSH connection test"* ]]
+}
+
+@test "cmd_validate --check-ssh runs the SSH test without prompting" {
+  create_test_state
+  save_state
+  setup_validate_command
+
+  # Stub the live ssh call — flag plumbing is under test, not the network.
+  validate_ssh_connection() { return 0; }
+
+  run cmd_validate --check-ssh
+  [[ "$output" != *"Test SSH connection for"* ]]
+  [[ "$output" == *"SSH connection successful"* ]]
+}
+
+@test "cmd_validate --yes assumes yes for the SSH test without prompting" {
+  create_test_state
+  save_state
+  setup_validate_command
+
+  validate_ssh_connection() { return 0; }
+
+  run cmd_validate --yes
+  [[ "$output" != *"Test SSH connection for"* ]]
+  [[ "$output" == *"SSH connection successful"* ]]
+}
+
+@test "cmd_validate rejects unknown options" {
+  create_test_state
+  save_state
+  setup_validate_command
+
+  run cmd_validate --bogus
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Unknown option"* ]]
+}
