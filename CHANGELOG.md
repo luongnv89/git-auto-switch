@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Unified workspace path canonicalization on `expand_path` so `gas current`,
+  `gas apply`, and the pre-commit hook agree on every input — workspaces
+  stored with a trailing slash or a mid-path `~` now match correctly (#20)
+
 ## [0.2.0] - 2026-04-28
 
 ### Added
