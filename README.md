@@ -325,7 +325,7 @@ make lint     # ShellCheck
 ```
 
 ```bash
-make test     # bats suite (72 tests)
+make test     # bats suite (207 tests)
 bats test/    # same suite, direct invocation
 ```
 
