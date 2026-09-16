@@ -61,6 +61,15 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
+@test "get_missing_deps stays set -u safe on an empty array (bash 3.2)" {
+  # bash 3.2 (the project floor) errors on "${arr[*]}" when the array is
+  # empty under set -u; the expansion must carry a :- default.
+  run grep -c 'echo "${missing\[\*\]:-}"' "$PROJECT_ROOT/lib/bootstrap.sh"
+  [ "$status" -eq 0 ]
+  [ "$output" -ge 1 ]
+  ! grep -q 'echo "${missing\[\*\]}"' "$PROJECT_ROOT/lib/bootstrap.sh"
+}
+
 # --------------------------------------------------------------------------
 # ensure_dependencies contract: 0 ready / 1 failed / 2 cancelled
 # --------------------------------------------------------------------------

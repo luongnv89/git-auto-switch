@@ -184,7 +184,10 @@ get_missing_deps() {
       missing+=("$dep")
     fi
   done
-  echo "${missing[*]}"
+  # bash 3.2 (the project floor) treats "${arr[*]}" on an empty array as an
+  # unbound variable under set -u — keep the :- default so the all-present
+  # fast path stays clean.
+  echo "${missing[*]:-}"
 }
 
 print_system_status() {
