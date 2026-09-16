@@ -1,7 +1,7 @@
 .PHONY: all lint test test-docker clean check-deps help install coverage version-check
 
 SHELL := /bin/bash
-SCRIPTS := git-auto-switch install.sh install-curl.sh lib/bootstrap.sh $(wildcard lib/**/*.sh) $(wildcard scripts/*.sh)
+SCRIPTS := git-auto-switch install-curl.sh lib/bootstrap.sh $(wildcard lib/**/*.sh) $(wildcard scripts/*.sh)
 
 # Pinned bats version (F-TEST-004): local installs, CI, and the
 # bats/bats image used by `make test-docker` must all agree on this.
