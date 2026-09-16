@@ -301,6 +301,44 @@ setup_ssh_keygen_mock() {
   [ ! -f "$SSH_KEYGEN_ARGS_FILE" ]
 }
 
+@test "apply <id> converts ssh:// origin to SSH alias" {
+  create_test_state
+  save_state
+  setup_apply_command
+
+  setup_test_repo "$HOME/some/repo" "ssh://git@github.com/user/repo.git"
+  cd "$HOME/some/repo"
+
+  run apply_to_current_repo "personal"
+  [ "$status" -eq 0 ]
+
+  local new_url
+  new_url=$(git -C "$HOME/some/repo" remote get-url origin)
+  [ "$new_url" = "git@gh-personal:user/repo.git" ]
+}
+
+@test "apply <id> normalizes an ssh:// aliased remote to the target alias" {
+  init_state
+  add_account "personal" "Personal" "gh-personal" "$HOME/.ssh/id_personal" \
+    '["'"$HOME"'/workspace/personal"]' "John Doe" "john@personal.com"
+  add_account "work" "Work" "gh-work" "$HOME/.ssh/id_work" \
+    '["'"$HOME"'/workspace/work"]' "John Work" "john@work.com"
+  save_state
+  setup_apply_command
+
+  setup_test_repo "$HOME/some/repo" "ssh://git@gh-personal/user/repo.git"
+  cd "$HOME/some/repo"
+
+  run apply_to_current_repo "work"
+  [ "$status" -eq 0 ]
+
+  local new_url local_email
+  new_url=$(git -C "$HOME/some/repo" remote get-url origin)
+  local_email=$(git -C "$HOME/some/repo" config --local --get user.email)
+  [ "$new_url" = "git@gh-work:user/repo.git" ]
+  [ "$local_email" = "john@work.com" ]
+}
+
 @test "apply <id> is idempotent when run twice" {
   create_test_state
   save_state

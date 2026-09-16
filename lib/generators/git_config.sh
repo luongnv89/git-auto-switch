@@ -5,11 +5,17 @@
 generate_git_config_file() {
   local account_json="$1"
 
-  local id git_name git_email ssh_key_path
+  local id git_name git_email ssh_key_path expanded_key_path
   id=$(echo "$account_json" | jq -r '.id')
   git_name=$(echo "$account_json" | jq -r '.git_name')
   git_email=$(echo "$account_json" | jq -r '.git_email')
   ssh_key_path=$(echo "$account_json" | jq -r '.ssh_key_path')
+
+  # Expand ~ before quoting: git strips gitconfig quotes when parsing, so the
+  # inner \" pair is what the shell sees — a literal ~ inside it would never
+  # tilde-expand. The escaped quotes keep a spaced key path one argument when
+  # git runs the sshCommand through a shell.
+  expanded_key_path=$(expand_path "$ssh_key_path")
 
   cat <<EOF
 # Git config for account: $id
@@ -20,7 +26,7 @@ generate_git_config_file() {
   email = $git_email
 
 [core]
-  sshCommand = ssh -i $ssh_key_path
+  sshCommand = "ssh -i \"$expanded_key_path\""
   hooksPath = $HOOKS_DIR
 EOF
 }

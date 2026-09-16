@@ -35,6 +35,48 @@ load test_helper
   echo "$git_config" | grep -q "hooksPath = $HOOKS_DIR"
 }
 
+@test "generate_git_config_file quotes a spaced ssh key path" {
+  init_state
+  add_account "personal" "Personal" "gh-personal" "$HOME/.ssh/my keys/id_rsa" \
+    '["'"$HOME"'/workspace/personal"]' "John Doe" "john@personal.com"
+
+  local account
+  account=$(get_account "personal")
+
+  local git_config
+  git_config=$(generate_git_config_file "$account")
+
+  # The command is emitted as a gitconfig-quoted string whose inner quotes
+  # survive into the shell command git runs, keeping the path one argument.
+  local expected="sshCommand = \"ssh -i \\\"$HOME/.ssh/my keys/id_rsa\\\"\""
+  [[ "$git_config" == *"$expected"* ]]
+
+  # End-to-end: git parses the generated file and the sshCommand value keeps
+  # the inner quoting that protects the spaced path from word-splitting.
+  local config_file="$HOME/gitconfig-personal"
+  printf '%s\n' "$git_config" > "$config_file"
+  local parsed
+  parsed=$(git config -f "$config_file" --get core.sshCommand)
+  [ "$parsed" = "ssh -i \"$HOME/.ssh/my keys/id_rsa\"" ]
+}
+
+@test "generate_git_config_file expands ~ in the ssh key path" {
+  init_state
+  add_account "personal" "Personal" "gh-personal" "~/.ssh/id_rsa" \
+    '["'"$HOME"'/workspace/personal"]' "John Doe" "john@personal.com"
+
+  local account
+  account=$(get_account "personal")
+
+  local git_config
+  git_config=$(generate_git_config_file "$account")
+
+  # A quoted "~" would not survive shell tilde-expansion, so the generator
+  # emits the expanded absolute path instead.
+  local expected="sshCommand = \"ssh -i \\\"$HOME/.ssh/id_rsa\\\"\""
+  [[ "$git_config" == *"$expected"* ]]
+}
+
 @test "generate_git_include_block creates includeIf entries" {
   create_test_state
 

@@ -51,6 +51,14 @@ rewrite_repo_remotes() {
     log_info "Converted HTTPS to SSH in $repo_path"
     log_info "  Old: $origin_url"
     log_info "  New: $new_url"
+  elif [[ "$origin_url" == ssh://git@github.com/* ]]; then
+    # Convert explicit ssh:// URLs to the same scp-style alias form
+    local repo_part="${origin_url#ssh://git@github.com/}"
+    local new_url="git@$ssh_alias:$repo_part"
+    git remote set-url origin "$new_url"
+    log_info "Converted ssh:// remote in $repo_path"
+    log_info "  Old: $origin_url"
+    log_info "  New: $new_url"
   fi
 
   cd "$current_dir" || return 0
