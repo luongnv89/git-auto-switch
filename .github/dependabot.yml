@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # GitHub Actions: keep every action pin in .github/workflows/ current —
+  # Dependabot opens a PR when a newer release of a used action exists.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # npm: keep package.json / package-lock.json dependencies current.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Python packaging metadata (pyproject.toml).
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"

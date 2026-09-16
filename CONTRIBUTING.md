@@ -131,6 +131,18 @@ No required env vars beyond `HOME`.
 5. Commit with a descriptive message
 6. Push and open a Pull Request
 
+## Branch Protection (maintainers)
+
+These expectations are recorded for maintainers; the settings themselves
+live in the repository admin page and are not changed by this file.
+
+- `main` accepts changes **only** through pull requests — no direct pushes.
+- Every PR must be green on **all** jobs in `.github/workflows/ci.yml`
+  (ShellCheck, Tests, Python, Node, Lockfile freshness, Coverage) before
+  merging.
+- Branches must be up to date with `main` before merging.
+- Force-pushes to `main` and deletion of `main` stay disabled.
+
 ## Reporting Issues
 
 Please include:

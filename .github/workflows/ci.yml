@@ -79,6 +79,29 @@ jobs:
       - name: Dry-run npm pack
         run: npm pack --dry-run
 
+  lockfile:
+    name: Lockfile freshness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # A stale package-lock.json fails this job: npm ci refuses to run when
+      # the lockfile and package.json disagree, and the regenerated lockfile
+      # must be byte-identical to the committed one.
+      - name: Verify package-lock.json is in sync
+        run: npm ci --dry-run --ignore-scripts
+
+      - name: Fail on lockfile drift
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          git diff --exit-code -- package-lock.json
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
