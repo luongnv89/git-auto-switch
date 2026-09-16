@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dependency bootstrap, `lib/bootstrap.sh` — OS detection, package-manager
   detection, dependency install flows, and banners now exist in exactly one
   place (F-CLEAN-002, F-DEAD-002, F-DEAD-004) (#23)
+- README install docs now list per-method runtime requirements (Python
+  >=3.11 for pip, Node >=22 for npm, curl/tar/sha256 tool for the curl
+  installer) and state that PyPI/npm publishing is manual — CI runs lint
+  and tests only, there is no automated release workflow yet (#31)
 
 ### Removed
 - Deprecated `install.sh` legacy installer shim — install via

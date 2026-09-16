@@ -73,7 +73,23 @@ mismatch the download is deleted and the install aborts. With no checksum
 available (e.g. `main` snapshots publish no sidecar) it warns and
 continues — pin `GAS_CHECKSUM` for a verified install.
 
-Requires Bash 3.2+, Git 2.13+, `jq`.
+Every method installs the same Bash CLI, so all of them need Bash 3.2+,
+Git 2.13+, and `jq` at runtime. Each method adds its own requirement:
+
+- `pip install git-auto-switch` — Python >=3.11; the wheel bundles the
+  CLI behind a Python launcher
+- `npm install -g git-auto-switch` — Node >=22; the package wraps the
+  CLI via a Node launcher
+- `install-curl.sh` — `curl` and `tar`, plus `sha256sum` or `shasum`
+  for the verified install
+- `make install` from a clone — `make`
+
+Both launcher shims check the runtime deps on first run and offer to
+install missing ones via your package manager.
+
+The PyPI and npm packages are published manually at release time. CI
+(`.github/workflows/ci.yml`) runs lint and tests on every push and PR —
+there is no automated release workflow yet.
 
 ## Commands
 
@@ -328,7 +344,7 @@ make lint     # ShellCheck
 ```
 
 ```bash
-make test     # bats suite (207 tests)
+make test     # bats suite (223 tests)
 bats test/    # same suite, direct invocation
 ```
 
