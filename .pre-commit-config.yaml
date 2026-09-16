@@ -18,12 +18,13 @@ repos:
       - id: ruff
 
   # Shell lint gate: same file set and baseline as `make lint`
-  # (Makefile SCRIPTS: entry point, install.sh, lib/**/*.sh).
+  # (Makefile SCRIPTS: entry point, install.sh, lib/**/*.sh,
+  # scripts/*.sh).
   # test/*.bats is intentionally excluded — shellcheck's bats-aware rules
   # (e.g. SC2314) disagree with the suite's established style.
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
-        files: '^(git-auto-switch|install\.sh|lib/.+\.sh)$'
+        files: '^(git-auto-switch|install\.sh|lib/.+\.sh|scripts/.+\.sh)$'
         args: ["--source-path=lib", "--severity=warning"]

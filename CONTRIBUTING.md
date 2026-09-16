@@ -75,10 +75,11 @@ No required env vars beyond `HOME`.
 ## Build and Test (recorded commands)
 
  ```bash
- make lint     # ShellCheck on git-auto-switch, install.sh, lib/**/*.sh
+ make lint     # ShellCheck on git-auto-switch, install.sh, lib/**/*.sh, scripts/*.sh
  bats test/    # bats suite
  make test     # same suite via Make (wraps `bats test/`)
- make all      # both: lint + test
+ make version-check  # all shipped version copies must match VERSION
+ make all      # all three: lint + test + version-check
  ```
 
  ## Running Tests
@@ -119,8 +120,12 @@ No required env vars beyond `HOME`.
    (enforced via `make lint` / ShellCheck).
  - bats per command: every `gas <command>` has a matching
    `test/<command>.bats` file; add/update the bats file with the command.
- - Version triple-source: keep `VERSION`, `package.json` (`version`), and
-   `pyproject.toml` (`project.version`) in sync on every release bump.
+ - Version single-source: `VERSION` is canonical; `package.json`,
+   `package-lock.json`, `pyproject.toml` (`project.version`),
+   `git_auto_switch/__init__.py` (`__version__`), and `GAS_VERSION` in
+   `lib/core/constants.sh` are derived copies. `make version-check` fails
+   on divergence; `scripts/check-version.sh --sync` rewrites them from
+   `VERSION` on a release bump.
 
 ## Pull Request Process
 
