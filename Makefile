@@ -1,13 +1,13 @@
-.PHONY: all lint test test-docker clean check-deps help install coverage
+.PHONY: all lint test test-docker clean check-deps help install coverage version-check
 
 SHELL := /bin/bash
-SCRIPTS := git-auto-switch install.sh install-curl.sh lib/bootstrap.sh $(wildcard lib/**/*.sh)
+SCRIPTS := git-auto-switch install.sh install-curl.sh lib/bootstrap.sh $(wildcard lib/**/*.sh) $(wildcard scripts/*.sh)
 
 # Pinned bats version (F-TEST-004): local installs, CI, and the
 # bats/bats image used by `make test-docker` must all agree on this.
 BATS_VERSION ?= 1.14.0
 
-all: lint test
+all: lint test version-check
 
 ## Linting
 lint:
@@ -19,6 +19,13 @@ lint:
 test:
 	@echo "Running tests..."
 	@bats test/
+
+## Version single-source check (F-CLEAN-003): fails when any shipped
+## version copy diverges from VERSION. `scripts/check-version.sh --sync`
+## rewrites the copies from VERSION at release time.
+version-check:
+	@echo "Checking version sources against VERSION..."
+	@bash scripts/check-version.sh
 
 ## Testing without a local bats install (containerized fallback).
 ## Uses the pinned bats/bats image and adds git, jq, and an ssh client
@@ -89,9 +96,10 @@ help:
 	@echo "Available targets:"
 	@echo "  make lint       - Run shellcheck on all scripts"
 	@echo "  make test       - Run bats tests"
+	@echo "  make version-check - Verify all version strings match VERSION"
 	@echo "  make test-docker - Run bats tests in container (no local bats needed)"
 	@echo "  make coverage   - Report coverage (pytest --cov; kcov for bash if installed)"
-	@echo "  make all        - Run lint and test"
+	@echo "  make all        - Run lint, test, and version-check"
 	@echo "  make check-deps - Verify required tools are installed"
 	@echo "  make install    - Install to /usr/local/bin"
 	@echo "  make uninstall  - Remove from /usr/local/bin"

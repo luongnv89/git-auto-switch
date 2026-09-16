@@ -43,11 +43,33 @@ shellcheck bats python3 nodejs` (Debian).
 - Keep scripts ShellCheck-clean: `make lint` must pass (see `.shellcheckrc`:
   `shell=bash`, `source-path=lib`, `SC2034` disabled)
 
-## Version triple-source
+## Version single-source
 
-Release bumps must keep three sources in sync: `VERSION`,
-`package.json` (`version`), `pyproject.toml` (`project.version`).
+`VERSION` is the canonical release version. Every shipped copy must match
+it: `package.json` (`version`), `package-lock.json`, `pyproject.toml`
+(`project.version`), `git_auto_switch/__init__.py` (`__version__`), and
+`lib/core/constants.sh` (`GAS_VERSION`).
+
+- `make version-check` (`scripts/check-version.sh`) fails when any copy
+  diverges; it is part of `make all`.
+- `scripts/check-version.sh --sync` rewrites every copy from `VERSION` —
+  run it on a release bump instead of editing the copies by hand.
+
 Current version: `0.2.0`.
+
+## Error-handling contract
+
+`set -euo pipefail` is the strict-mode contract, set once per process by
+the entry point — never inside sourced modules:
+
+| Module | Contract |
+|--------|----------|
+| `git-auto-switch`, `gas` | `set -euo pipefail` at the top, before sourcing `lib/` |
+| `lib/**/*.sh` | sourced modules — inherit the entry point's options; never `set`/`set +e` themselves; `return` for function errors, `exit` only on fatal top-level paths (unknown command, SIGINT, `log_fatal`) |
+| `lib/generators/hooks.sh` | emits `set -euo pipefail` into the generated pre-commit hook |
+| `scripts/*.sh` | standalone tools — `set -euo pipefail` at the top |
+| `install.sh` | `set -e` (legacy installer) |
+| `install-curl.sh` | explicit per-command error handling, no global `set -e` |
 
 ## Constraints
 
