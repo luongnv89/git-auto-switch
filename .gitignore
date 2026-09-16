@@ -16,6 +16,9 @@
 # Test artifacts
 test/tmp/
 .bats-run-*/
+.coverage
+coverage.xml
+coverage/
 
 # Environment
 .env
