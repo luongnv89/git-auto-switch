@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `install-curl.sh` no longer exits 1 after a successful install — its EXIT
   trap referenced a function-local `tmp_dir`, which is unbound under
   `set -u` once `main` returns (#23)
+- Collapsed the jq N+1 query patterns: account fields are now extracted in a
+  single jq projection in `validate_state`, `audit`, `validate`, and `apply`
+  (~53% faster state validation on a 10-account fixture), and
+  `update_account` now allowlists writable fields with type-preserving
+  writes so `workspaces` keeps its array type (#24)
 
 ## [0.2.0] - 2026-04-28
 
