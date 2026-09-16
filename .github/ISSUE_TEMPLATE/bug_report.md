@@ -15,7 +15,8 @@ A clear description of the bug.
 - Git version: [output of `git --version`]
 
 ## Steps to Reproduce
-1. Run `./install.sh`
+1. Install and run git-auto-switch (`pip install git-auto-switch`,
+   `npm install -g git-auto-switch`, or `bash install-curl.sh`)
 2. Enter these values: ...
 3. See error
 

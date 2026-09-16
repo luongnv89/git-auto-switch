@@ -75,7 +75,7 @@ No required env vars beyond `HOME`.
 ## Build and Test (recorded commands)
 
  ```bash
- make lint     # ShellCheck on git-auto-switch, install.sh, lib/**/*.sh, scripts/*.sh
+ make lint     # ShellCheck on git-auto-switch, install-curl.sh, lib/**/*.sh, scripts/*.sh
  bats test/    # bats suite
  make test     # same suite via Make (wraps `bats test/`)
  make version-check  # all shipped version copies must match VERSION

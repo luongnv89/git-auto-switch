@@ -9,7 +9,7 @@ with timestamped backups under `~/.git-auto-switch/backup/<timestamp>/`.
 
 All recorded in `CONTRIBUTING.md` (source of truth for flags); short list:
 
-- `make lint` — ShellCheck on `git-auto-switch`, `install.sh`, `lib/**/*.sh`
+- `make lint` — ShellCheck on `git-auto-switch`, `install-curl.sh`, `lib/**/*.sh`
 - `bats test/` — full bats suite, direct invocation
 - `make test` — same suite via Make (wraps `bats test/`)
 - `make all` — both: lint + test
@@ -32,7 +32,7 @@ shellcheck bats python3 nodejs` (Debian).
 - `lib/generators/` — `ssh_config.sh`, `git_config.sh`, `hooks.sh`
 - `lib/applicators/` — `ssh.sh`, `git.sh`, `hooks.sh`, `remotes.sh`
 - `test/` — bats suite, one file per command plus `test_helper.bash`
-- `install.sh`, `install-curl.sh`, `bin/`, `git_auto_switch/` (PyPI/npm shims)
+- `install-curl.sh`, `bin/`, `git_auto_switch/` (PyPI/npm shims)
 
 ## Bash style
 
@@ -68,7 +68,6 @@ the entry point — never inside sourced modules:
 | `lib/**/*.sh` | sourced modules — inherit the entry point's options; never `set`/`set +e` themselves; `return` for function errors, `exit` only on fatal top-level paths (unknown command, SIGINT, `log_fatal`) |
 | `lib/generators/hooks.sh` | emits `set -euo pipefail` into the generated pre-commit hook |
 | `scripts/*.sh` | standalone tools — `set -euo pipefail` at the top |
-| `install.sh` | `set -e` (legacy installer) |
 | `install-curl.sh` | explicit per-command error handling, no global `set -e` |
 
 ## Constraints

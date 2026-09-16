@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   detection, dependency install flows, and banners now exist in exactly one
   place (F-CLEAN-002, F-DEAD-002, F-DEAD-004) (#23)
 
+### Removed
+- Deprecated `install.sh` legacy installer shim — install via
+  `pip install git-auto-switch`, `npm install -g git-auto-switch`, or
+  `install-curl.sh` instead (#30)
+
 ### Fixed
 - Unified workspace path canonicalization on `expand_path` so `gas current`,
   `gas apply`, and the pre-commit hook agree on every input — workspaces

@@ -24,7 +24,7 @@ invocations.
 - Shared: `lib/core/`, `lib/state/`; output: `lib/generators/`,
   `lib/applicators/`
 - Tests: `test/` (bats suite plus `test_helper.bash`)
-- Packaging: `bin/`, `git_auto_switch/`, `install.sh`, `install-curl.sh`
+- Packaging: `bin/`, `git_auto_switch/`, `install-curl.sh`
 
 ## Conventions
 
