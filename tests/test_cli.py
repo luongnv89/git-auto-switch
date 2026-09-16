@@ -6,12 +6,15 @@ codes, and error paths. No network, no installs — subprocess.run is mocked.
 """
 
 import inspect
+import io
 import sys
+import tomllib
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+import git_auto_switch
 from git_auto_switch import cli
 
 
@@ -136,3 +139,36 @@ def test_launcher_has_no_detection_or_install_logic():
 def test_no_shell_true_anywhere_in_shim():
     # F-SEC-001 regression guard: no curl-pipe via shell=True may return.
     assert "shell=True" not in inspect.getsource(cli)
+
+
+# --- Survivors of the F-CLEAN-002 convergence: helpers the shim still owns ---
+
+
+def test_print_colored_keeps_ansi_on_tty(monkeypatch):
+    class TTY(io.StringIO):
+        def isatty(self):
+            return True
+
+    tty = TTY()
+    monkeypatch.setattr(sys, "stdout", tty)
+    cli.print_colored(f"{cli.BOLD}hello{cli.NC}")
+    assert "\033[" in tty.getvalue()
+
+
+def test_get_script_path_prefers_packaged_script(monkeypatch):
+    monkeypatch.setattr(
+        Path, "exists", lambda self: str(self).endswith("scripts/git-auto-switch")
+    )
+    expected = Path(cli.__file__).parent / "scripts" / "git-auto-switch"
+    assert cli.get_script_path() == expected
+
+
+def test_get_script_path_returns_none_when_absent(monkeypatch):
+    monkeypatch.setattr(Path, "exists", lambda self: False)
+    assert cli.get_script_path() is None
+
+
+def test_package_version_matches_pyproject():
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    version = tomllib.loads(pyproject.read_text())["project"]["version"]
+    assert git_auto_switch.__version__ == version
