@@ -99,13 +99,10 @@ cmd_apply() {
   echo "  - Pre-commit hook installed at $HOOKS_DIR/pre-commit"
   echo
   echo "Test SSH connections with:"
-  for ((i=0; i<account_count; i++)); do
-    local account
-    account=$(get_account_by_index "$i")
-    local ssh_alias
-    ssh_alias=$(echo "$account" | jq -r '.ssh_alias')
+  local ssh_alias
+  while IFS= read -r ssh_alias; do
     echo "  ssh -T git@$ssh_alias"
-  done
+  done <<< "$(echo "$STATE_JSON" | jq -r '.accounts[].ssh_alias // empty')"
   echo
 }
 
@@ -130,12 +127,9 @@ apply_to_current_repo() {
   local repo_root
   repo_root=$(git rev-parse --show-toplevel)
 
-  local id ssh_alias ssh_key_path git_name git_email
-  id=$(echo "$account" | jq -r '.id')
-  ssh_alias=$(echo "$account" | jq -r '.ssh_alias')
-  ssh_key_path=$(echo "$account" | jq -r '.ssh_key_path')
-  git_name=$(echo "$account" | jq -r '.git_name')
-  git_email=$(echo "$account" | jq -r '.git_email')
+  # Single jq projection: all fields in one call (F-PERF-003)
+  parse_account_fields "$account"
+  local id="$ACCT_ID" ssh_alias="$ACCT_SSH_ALIAS" ssh_key_path="$ACCT_SSH_KEY_PATH" git_name="$ACCT_GIT_NAME" git_email="$ACCT_GIT_EMAIL"
 
   echo
   log_info "Applying account '$id' to repository: $repo_root"

@@ -86,14 +86,9 @@ validate_state() {
   local seen_aliases=()
 
   for ((i=0; i<account_count; i++)); do
-    local account
-    account=$(echo "$STATE_JSON" | jq ".accounts[$i]")
-
-    local id name ssh_alias git_email
-    id=$(echo "$account" | jq -r '.id // empty')
-    name=$(echo "$account" | jq -r '.name // empty')
-    ssh_alias=$(echo "$account" | jq -r '.ssh_alias // empty')
-    git_email=$(echo "$account" | jq -r '.git_email // empty')
+    # Single jq projection: all fields + workspaces in one call (F-PERF-001)
+    read_account_fields "$i"
+    local id="$ACCT_ID" name="$ACCT_NAME" ssh_alias="$ACCT_SSH_ALIAS" git_email="$ACCT_GIT_EMAIL"
 
     # Required fields
     if [[ -z "$id" ]]; then
@@ -112,8 +107,7 @@ validate_state() {
     fi
 
     # Check workspaces array
-    local workspaces_count
-    workspaces_count=$(echo "$account" | jq '.workspaces | length // 0')
+    local workspaces_count=${#ACCT_WORKSPACES[@]}
     if [[ $workspaces_count -eq 0 ]]; then
       log_error "Account '$id' missing 'workspaces' field or empty"
       ((errors++))
@@ -140,8 +134,7 @@ validate_state() {
 
     # Check each workspace in the account
     for ((j=0; j<workspaces_count; j++)); do
-      local workspace
-      workspace=$(echo "$account" | jq -r ".workspaces[$j]")
+      local workspace="${ACCT_WORKSPACES[$j]}"
 
       if [[ ${#seen_workspaces[@]} -gt 0 ]]; then
         for seen_ws in "${seen_workspaces[@]}"; do
@@ -202,6 +195,50 @@ get_account_by_id_or_alias() {
 get_account_by_index() {
   local index="$1"
   echo "$STATE_JSON" | jq ".accounts[$index]"
+}
+
+# jq program for the single-projection account extraction (F-PERF-001/003).
+# Output: line 1 joins the scalar fields with \x1f (ASCII unit separator —
+# unlike a tab it is not IFS whitespace, so empty fields survive `IFS= read`);
+# each following line is one workspace entry.
+GAS_ACCOUNT_PROJECTION='
+  ([.id, .name, .ssh_alias, .ssh_key_path, .git_name, .git_email]
+    | map(. // "" | tostring) | join("\u001f")),
+  (if (.workspaces | type) == "array" then .workspaces[] else empty end)'
+
+# Unpack a projection dump (see GAS_ACCOUNT_PROJECTION) into globals:
+# ACCT_ID, ACCT_NAME, ACCT_SSH_ALIAS, ACCT_SSH_KEY_PATH, ACCT_GIT_NAME,
+# ACCT_GIT_EMAIL and the ACCT_WORKSPACES array.
+_unpack_account_fields() {
+  ACCT_ID=""
+  ACCT_NAME=""
+  ACCT_SSH_ALIAS=""
+  ACCT_SSH_KEY_PATH=""
+  ACCT_GIT_NAME=""
+  ACCT_GIT_EMAIL=""
+  ACCT_WORKSPACES=()
+
+  local ws
+  {
+    IFS=$'\x1f' read -r ACCT_ID ACCT_NAME ACCT_SSH_ALIAS ACCT_SSH_KEY_PATH ACCT_GIT_NAME ACCT_GIT_EMAIL
+    while IFS= read -r ws; do
+      ACCT_WORKSPACES+=("$ws")
+    done
+  } <<< "$1"
+}
+
+# Populate the ACCT_* globals from .accounts[index] of $STATE_JSON — one jq
+# call per account instead of one subprocess per field (the N+1 pattern this
+# replaces).
+read_account_fields() {
+  _unpack_account_fields "$(echo "$STATE_JSON" | jq -r --argjson i "$1" \
+    ".accounts[\$i] | ($GAS_ACCOUNT_PROJECTION)")"
+}
+
+# Populate the ACCT_* globals from an account JSON object (e.g. the result of
+# get_account_by_id_or_alias) — one jq call, same projection.
+parse_account_fields() {
+  _unpack_account_fields "$(echo "$1" | jq -r "$GAS_ACCOUNT_PROJECTION")"
 }
 
 # List all account IDs

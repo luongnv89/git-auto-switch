@@ -31,25 +31,18 @@ cmd_audit() {
   local failed_repos=0
 
   for ((i=0; i<account_count; i++)); do
-    local account
-    account=$(get_account_by_index "$i")
-
-    local id name ssh_alias git_email
-    id=$(echo "$account" | jq -r '.id')
-    name=$(echo "$account" | jq -r '.name')
-    ssh_alias=$(echo "$account" | jq -r '.ssh_alias')
-    git_email=$(echo "$account" | jq -r '.git_email')
+    # Single jq projection: all fields + workspaces in one call (F-PERF-003)
+    read_account_fields "$i"
+    local name="$ACCT_NAME" ssh_alias="$ACCT_SSH_ALIAS" git_email="$ACCT_GIT_EMAIL"
 
     echo
     log_info "Auditing account: $name"
 
     # Process all workspaces for this account
-    local workspaces_count
-    workspaces_count=$(echo "$account" | jq '.workspaces | length')
+    local workspaces_count=${#ACCT_WORKSPACES[@]}
 
     for ((j=0; j<workspaces_count; j++)); do
-      local workspace
-      workspace=$(echo "$account" | jq -r ".workspaces[$j]")
+      local workspace="${ACCT_WORKSPACES[$j]}"
 
       local expanded_workspace
       expanded_workspace=$(expand_path "$workspace")

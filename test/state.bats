@@ -108,6 +108,92 @@ load test_helper
   [ "$(echo "$account" | jq -r '.git_email')" = "john@personal.com" ]
 }
 
+@test "parse_account_fields projects all fields in one call (F-PERF-001)" {
+  create_test_state
+
+  local account
+  account=$(get_account_by_index 0)
+  parse_account_fields "$account"
+
+  [ "$ACCT_ID" = "personal" ]
+  [ "$ACCT_NAME" = "Personal" ]
+  [ "$ACCT_SSH_ALIAS" = "gh-personal" ]
+  [ "$ACCT_SSH_KEY_PATH" = "$HOME/.ssh/id_personal" ]
+  [ "$ACCT_GIT_NAME" = "John Doe" ]
+  [ "$ACCT_GIT_EMAIL" = "john@personal.com" ]
+  [ "${#ACCT_WORKSPACES[@]}" -eq 1 ]
+  [ "${ACCT_WORKSPACES[0]}" = "$HOME/workspace/personal" ]
+}
+
+@test "read_account_fields projects .accounts[index] in one call (F-PERF-001)" {
+  create_test_state
+
+  read_account_fields 0
+
+  [ "$ACCT_ID" = "personal" ]
+  [ "$ACCT_SSH_ALIAS" = "gh-personal" ]
+  [ "$ACCT_GIT_EMAIL" = "john@personal.com" ]
+  [ "${#ACCT_WORKSPACES[@]}" -eq 1 ]
+  [ "${ACCT_WORKSPACES[0]}" = "$HOME/workspace/personal" ]
+}
+
+@test "parse_account_fields keeps empty fields and multiple workspaces" {
+  init_state
+  STATE_JSON=$(echo "$STATE_JSON" | jq '.accounts = [
+    {"id": "t", "name": "T", "ssh_alias": "gh-t", "workspaces": ["~/w1", "~/w2"]}
+  ]')
+
+  local account
+  account=$(get_account_by_index 0)
+  parse_account_fields "$account"
+
+  # Missing scalar fields come back empty without shifting positions
+  [ "$ACCT_ID" = "t" ]
+  [ -z "$ACCT_SSH_KEY_PATH" ]
+  [ -z "$ACCT_GIT_NAME" ]
+  [ -z "$ACCT_GIT_EMAIL" ]
+  [ "${#ACCT_WORKSPACES[@]}" -eq 2 ]
+  [ "${ACCT_WORKSPACES[1]}" = "~/w2" ]
+}
+
+@test "update_account writes workspaces as a JSON array (F-BUG-002)" {
+  create_test_state
+
+  update_account "personal" "workspaces" '["~/new1","~/new2"]'
+
+  [ "$(echo "$STATE_JSON" | jq -r '.accounts[0].workspaces | type')" = "array" ]
+  [ "$(echo "$STATE_JSON" | jq -r '.accounts[0].workspaces[1]')" = "~/new2" ]
+}
+
+@test "update_account rejects non-allowlisted fields (F-BUG-002)" {
+  create_test_state
+
+  run update_account "personal" "evil_field" "pwned"
+  [ "$status" -eq 1 ]
+  [ "$(echo "$STATE_JSON" | jq -r '.accounts[0].evil_field // "<absent>"')" = "<absent>" ]
+
+  # The lookup key itself is not writable either
+  run update_account "personal" "id" "renamed"
+  [ "$status" -eq 1 ]
+}
+
+@test "update_account rejects a non-array workspaces value (F-BUG-002)" {
+  create_test_state
+
+  run update_account "personal" "workspaces" '"~/not-an-array"'
+  [ "$status" -eq 1 ]
+  # Original array untouched after the rejected write
+  [ "$(echo "$STATE_JSON" | jq -r '.accounts[0].workspaces[0]')" = "$HOME/workspace/personal" ]
+}
+
+@test "update_account updates scalar fields as strings" {
+  create_test_state
+
+  update_account "personal" "git_email" "new@personal.com"
+  [ "$(echo "$STATE_JSON" | jq -r '.accounts[0].git_email')" = "new@personal.com" ]
+  [ "$(echo "$STATE_JSON" | jq -r '.accounts[0].git_email | type')" = "string" ]
+}
+
 @test "account ID containing double-quote round-trips (F-BUG-001)" {
   init_state
   # Bypass add_account validation (IDs are alphanumeric-only at write
