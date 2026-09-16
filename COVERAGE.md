@@ -20,6 +20,13 @@ checkout without `kcov` stays green).
   in the coverage job log; record it here on the first CI run that has it.
 - bats suite: **72/72 passing** (`bats test/`).
 
+## Refresh (v0.3.0, 2026-09-16)
+
+- Python (`pytest --cov=git_auto_switch tests/`): **98% total**
+  (`git_auto_switch/__init__.py` 100%, `git_auto_switch/cli.py` 98%,
+  17 tests in `tests/test_cli.py`, all passing).
+- bats suite: **226/226 passing** (`bats test/`).
+
 ## Reproduce
 
 ```

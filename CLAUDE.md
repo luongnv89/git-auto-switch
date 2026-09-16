@@ -9,10 +9,11 @@ with timestamped backups under `~/.git-auto-switch/backup/<timestamp>/`.
 
 All recorded in `CONTRIBUTING.md` (source of truth for flags); short list:
 
-- `make lint` — ShellCheck on `git-auto-switch`, `install-curl.sh`, `lib/**/*.sh`
+- `make lint` — ShellCheck on `git-auto-switch`, `install-curl.sh`,
+  `lib/**/*.sh` (incl. `lib/bootstrap.sh`), `scripts/*.sh`
 - `bats test/` — full bats suite, direct invocation
 - `make test` — same suite via Make (wraps `bats test/`)
-- `make all` — both: lint + test
+- `make all` — all three: lint + test + version-check
 - `make check-deps` — verify `shellcheck`, `bats`, `jq` are installed
 - `make install` — link `git-auto-switch`/`gas` into `~/.local/bin`
 
@@ -32,6 +33,9 @@ shellcheck bats python3 nodejs` (Debian).
 - `lib/generators/` — `ssh_config.sh`, `git_config.sh`, `hooks.sh`
 - `lib/applicators/` — `ssh.sh`, `git.sh`, `hooks.sh`, `remotes.sh`
 - `test/` — bats suite, one file per command plus `test_helper.bash`
+- `lib/bootstrap.sh` — OS/PM detection + dependency installs, shared by
+  `bin/git-auto-switch.js`, `git_auto_switch/cli.py`, `install-curl.sh`
+- `scripts/` — `check-version.sh` (see "Version single-source")
 - `install-curl.sh`, `bin/`, `git_auto_switch/` (PyPI/npm shims)
 
 ## Bash style
@@ -55,7 +59,7 @@ it: `package.json` (`version`), `package-lock.json`, `pyproject.toml`
 - `scripts/check-version.sh --sync` rewrites every copy from `VERSION` —
   run it on a release bump instead of editing the copies by hand.
 
-Current version: `0.2.0`.
+Current version: `0.3.0`.
 
 ## Error-handling contract
 

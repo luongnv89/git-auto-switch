@@ -105,6 +105,7 @@ the `make security-scan` secret-scan gate and state-file permissions.
 | `gas apply` | Re-sync all configs (SSH, git, hooks, remotes) system-wide |
 | `gas apply <id\|alias>` | Apply one account to the current repo only |
 | `gas apply --yes` / `--no-prompt` | Same, never pausing for confirmation (CI/scripts) |
+| `gas apply --no-passphrase` | Allow generating an unencrypted SSH key (default prompts for a passphrase) |
 | `gas audit` | Scan repos for identity mismatches |
 | `gas audit --fix` | Same, plus auto-correct what it finds |
 | `gas validate` | Check the config for errors (overlapping workspaces, dup aliases, …) |
@@ -302,7 +303,8 @@ Add another workspace? (leave empty to continue): ~/projects/company
 Add another workspace? (leave empty to continue):
 ```
 
-Edit later via `gas` -> option `[2] Manage workspaces`. `gas list`
+Edit later by adding to the account's `workspaces` list in
+`~/.git-auto-switch/config.json`, then run `gas apply`. `gas list`
 shows the full set:
 
 ```
@@ -347,7 +349,7 @@ make lint     # ShellCheck
 ```
 
 ```bash
-make test     # bats suite (223 tests)
+make test     # bats suite (226 tests)
 bats test/    # same suite, direct invocation
 ```
 
