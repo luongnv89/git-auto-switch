@@ -80,3 +80,33 @@ EOF
   grep -q "Host existing" "$SSH_CONFIG"
   grep -q "Host another" "$SSH_CONFIG"
 }
+
+@test "ensure_github_known_hosts records verified keys on fingerprint match" {
+  export GAS_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts"
+  rm -f "$GAS_SSH_KNOWN_HOSTS"
+  ssh-keyscan() {
+    gas_github_known_host_keys
+  }
+  export -f ssh-keyscan
+
+  run ensure_github_known_hosts
+  [ "$status" -eq 0 ]
+  grep -q "AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" "$GAS_SSH_KNOWN_HOSTS"
+  ! grep -q "accept-new" "$GAS_SSH_KNOWN_HOSTS"
+}
+
+@test "ensure_github_known_hosts aborts on fingerprint mismatch" {
+  export GAS_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts"
+  rm -f "$GAS_SSH_KNOWN_HOSTS"
+  ssh-keyscan() {
+    echo "github.com ssh-ed25519 AAAAC3FakeAttackerKeyAAAAMITMNOTGITHUB"
+  }
+  export -f ssh-keyscan
+
+  run ensure_github_known_hosts
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"mismatch"* ]]
+  if [[ -f "$GAS_SSH_KNOWN_HOSTS" ]]; then
+    ! grep -q "FakeAttacker" "$GAS_SSH_KNOWN_HOSTS"
+  fi
+}

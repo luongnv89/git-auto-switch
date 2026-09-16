@@ -17,9 +17,11 @@ COMMANDS:
   init        Initialize configuration (first-time setup)
   add         Add a new account
   remove [id] Remove an account (interactive if no ID provided)
-  list        List all configured accounts
-  apply [id]  Apply configuration to system (no id) or a single account
-              to the current repository (id or ssh_alias given)
+   list        List all configured accounts
+   apply [id]  Apply configuration to system (no id) or a single account
+               to the current repository (id or ssh_alias given)
+               [--no-passphrase: allow generating unencrypted SSH keys;
+               default prompts for a key passphrase]
   validate    Validate configuration and check for issues
   audit       Audit repositories for identity mismatches (--fix to auto-fix)
   current     Show current active account for this directory

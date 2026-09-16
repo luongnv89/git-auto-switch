@@ -54,8 +54,14 @@ def test_get_script_path_resolves_to_repo():
 
 def test_detect_os_returns_known_value():
     assert cli.detect_os() in (
-        "macos", "debian", "redhat", "arch", "alpine", "linux",
-        "Windows", "Java",
+        "macos",
+        "debian",
+        "redhat",
+        "arch",
+        "alpine",
+        "linux",
+        "Windows",
+        "Java",
     ) or isinstance(cli.detect_os(), str)
 
 
