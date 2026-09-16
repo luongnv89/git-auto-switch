@@ -25,8 +25,8 @@ Usage: check-version.sh [--sync] [repo-root]
 
 VERSION is the single canonical source of the release version.
 
-  (default)   check mode: verify every derived copy matches VERSION,
-              exit 1 on any divergence or unreadable source
+  (default)   check mode: verify every derived copy matches VERSION
+              (exit 1 on divergence, 2 on a missing/unreadable source)
   --sync      rewrite each derived copy from VERSION (release bumps)
   repo-root   tree to inspect (default: the script's own repo root)
 
@@ -89,14 +89,20 @@ sh_version() { sed -n 's/^readonly GAS_VERSION="\(.*\)"/\1/p' "$root/lib/core/co
 # Rewrite a JSON file through jq (same-fs tmp + mv keeps the write atomic).
 rewrite_json() {
   local filter="$1" path="$2"
-  jq --arg v "$canonical" "$filter" "$path" > "$path.tmp.$$"
+  jq --arg v "$canonical" "$filter" "$path" > "$path.tmp.$$" || {
+    rm -f "$path.tmp.$$"
+    return 1
+  }
   mv "$path.tmp.$$" "$path"
 }
 
 # Rewrite one anchored line via a complete sed substitution (same-fs tmp + mv).
 rewrite_sed() {
   local expr="$1" path="$2"
-  sed "$expr" "$path" > "$path.tmp.$$"
+  sed "$expr" "$path" > "$path.tmp.$$" || {
+    rm -f "$path.tmp.$$"
+    return 1
+  }
   mv "$path.tmp.$$" "$path"
 }
 
