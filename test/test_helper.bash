@@ -47,3 +47,28 @@ create_test_state() {
   add_account "personal" "Personal" "gh-personal" "$HOME/.ssh/id_personal" \
     '["'"$HOME"'/workspace/personal"]' "John Doe" "john@personal.com"
 }
+
+# Instrument find(1) via a PATH stub that logs every invocation before
+# delegating to the real binary — the instrumented walk count used by the
+# F-PERF-002 repository-scan cache tests.
+setup_find_stub() {
+  STUB_BIN="$TEST_TEMP_DIR/stubbin"
+  FIND_CALLS_LOG="$TEST_TEMP_DIR/find-calls.log"
+  mkdir -p "$STUB_BIN"
+  local real_find
+  real_find="$(command -v find)"
+  cat > "$STUB_BIN/find" <<EOF
+#!/usr/bin/env bash
+echo "find \$@" >> "$FIND_CALLS_LOG"
+exec "$real_find" "\$@"
+EOF
+  chmod +x "$STUB_BIN/find"
+}
+
+find_call_count() {
+  if [[ -f "$FIND_CALLS_LOG" ]]; then
+    wc -l < "$FIND_CALLS_LOG" | tr -d ' '
+  else
+    echo 0
+  fi
+}

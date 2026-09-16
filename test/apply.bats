@@ -359,3 +359,33 @@ setup_ssh_keygen_mock() {
   [ "$new_url" = "git@gh-personal:user/repo.git" ]
   [ "$local_email" = "john@personal.com" ]
 }
+
+@test "apply + audit --fix performs one workspace walk on a 50-repo fixture (F-PERF-002)" {
+  create_test_state
+  save_state
+  setup_apply_command
+  source "$PROJECT_ROOT/lib/commands/audit.sh"
+  setup_find_stub
+
+  # 50 repositories inside the single configured workspace.
+  local ws="$HOME/workspace/personal"
+  local i
+  for i in $(seq 1 50); do
+    setup_test_repo "$ws/repo$i" "git@github.com:user/repo$i.git"
+  done
+  cd "$HOME"
+
+  # ensure_ssh_key skips generation (and its prompt) when the file exists.
+  touch "$HOME/.ssh/id_personal"
+
+  PATH="$STUB_BIN:$PATH" run cmd_apply
+  [ "$status" -eq 0 ]
+
+  # audit --fix reports (and fixes) the initial email mismatches -> exit 1.
+  PATH="$STUB_BIN:$PATH" run cmd_audit --fix
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Audit Summary"* ]]
+
+  # One find(1) invocation total: apply's walk is reused by audit --fix.
+  [ "$(find_call_count)" -eq 1 ]
+}

@@ -249,6 +249,12 @@ State lives in `~/.git-auto-switch/config.json`:
 }
 ```
 
+Repository scans are cached per workspace under
+`~/.git-auto-switch/cache/repo-scans/` so back-to-back commands (e.g.
+`gas apply` then `gas audit --fix`) walk each workspace once. Entries
+expire after `GAS_SCAN_CACHE_TTL` seconds (default `300`; set `0` to
+disable).
+
 Backups are written to `~/.git-auto-switch/backup/<timestamp>/` before
 every change. Restore with:
 
