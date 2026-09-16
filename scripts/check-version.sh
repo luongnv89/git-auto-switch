@@ -158,9 +158,13 @@ run_checks() {
     local lock_versions
     # `|| true`: a malformed lockfile reports as <missing>, not a silent abort
     lock_versions="$(pkg_lock_versions || true)"
-    # intentional word split: one version per line
+    # intentional word split: one version per line. A failed or partial
+    # extraction (malformed JSON, unexpected .packages shape) yields != 2
+    # lines — report it as <missing> rather than skipping the check.
     # shellcheck disable=SC2086
-    report "package-lock.json" $lock_versions
+    set -- $lock_versions
+    [[ "$#" -eq 2 ]] || set -- ""
+    report "package-lock.json" "$@"
   else
     report "package-lock.json" ""
   fi

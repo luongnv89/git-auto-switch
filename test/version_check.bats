@@ -69,6 +69,16 @@ EOF
   [[ "$output" == *"package-lock.json"* ]]
 }
 
+@test "version-check: malformed package-lock.json reports a mismatch" {
+  local dir="$TEST_TEMP_DIR/vtree"
+  make_version_fixture "$dir"
+  printf 'not json {{{\n' > "$dir/package-lock.json"
+
+  run bash "$PROJECT_ROOT/scripts/check-version.sh" "$dir"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"MISMATCH"*"package-lock.json"* ]]
+}
+
 @test "version-check --sync: rewrites every divergent copy from VERSION" {
   local dir="$TEST_TEMP_DIR/vtree"
   make_version_fixture "$dir" "2.0.0"
