@@ -7,29 +7,38 @@ cmd_apply() {
     die "Not initialized. Run 'git-auto-switch init' first."
   fi
 
-  # Parse flags. --no-passphrase explicitly opts out of encrypted-key
-  # creation for any keys generated during this run (logged by ensure_ssh_key).
+  # Parse flags.
+  #   --no-passphrase  explicitly opts out of encrypted-key creation for any
+  #                    keys generated during this run (logged by ensure_ssh_key)
+  #   --yes, -y        non-interactive: never pause for confirmation
+  #   --no-prompt      never prompt (same effect as --yes for apply)
+  # The first non-flag argument remains the account id/alias.
   local no_passphrase="false"
+  local no_prompt="false"
   local target=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --no-passphrase)
         no_passphrase="true"
-        shift
+        ;;
+      --yes|-y|--no-prompt)
+        no_prompt="true"
         ;;
       -h|--help)
         show_help
         return 0
         ;;
+      --*)
+        die "Unknown option for 'apply': $1 (supported: --yes, --no-prompt, --no-passphrase)"
+        ;;
       *)
-        if [[ -z "$target" ]]; then
-          target="$1"
-        else
-          die "Unknown argument: $1 (usage: gas apply [--no-passphrase] [id|ssh_alias])"
+        if [[ -n "$target" ]]; then
+          die "Unexpected extra argument for 'apply': $1"
         fi
-        shift
+        target="$1"
         ;;
     esac
+    shift
   done
   if [[ "${GAS_NO_PASSPHRASE:-false}" == "true" ]]; then
     no_passphrase="true"
@@ -63,7 +72,7 @@ cmd_apply() {
   for ((i=0; i<account_count; i++)); do
     local account
     account=$(get_account_by_index "$i")
-    ensure_ssh_key "$account" "$no_passphrase"
+    ensure_ssh_key "$account" "$no_passphrase" "$no_prompt"
   done
 
   # Step 1b: Verify github.com host keys before trusting them.

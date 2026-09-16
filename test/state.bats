@@ -215,3 +215,25 @@ load test_helper
 
   [ -z "$(get_account 'no"pe')" ]
 }
+
+# --- Non-interactive safety (issue #29) ---
+
+@test "prompt_account_info skips the live SSH auth test on a non-TTY stdin" {
+  init_state
+  # An existing key is what triggers the ssh -T auth check.
+  ssh-keygen -t ed25519 -f "$HOME/.ssh/id_ed25519" -N "" -C "test@example.com" -q
+  mkdir -p "$HOME/workspace/scripted"
+
+  # Even if reached, a stubbed ssh can never block (mimics GitHub's rc=1
+  # "successfully authenticated" so a regression still terminates).
+  ssh() { echo "stub: successfully authenticated"; return 1; }
+
+  local answers="$TEST_TEMP_DIR/answers.txt"
+  printf 'scripted\n\n\n\n%s\nScripted User\nscripted@example.com\n' \
+    "$HOME/.ssh/id_ed25519" > "$answers"
+
+  run prompt_account_info < "$answers"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Skipping SSH authentication test"* ]]
+  [[ "$output" != *"Testing SSH authentication with GitHub"* ]]
+}

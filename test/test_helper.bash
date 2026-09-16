@@ -72,3 +72,31 @@ find_call_count() {
     echo 0
   fi
 }
+
+# assert_completes_within SECONDS CMD [ARGS...]
+# Runs CMD with whatever stdin the caller redirected, and fails (rc 1) if it
+# is still running after SECONDS — the regression guard for prompts that
+# block on a non-TTY stdin. The command's own exit code is ignored; pair it
+# with an output/status assertion elsewhere if that matters.
+assert_completes_within() {
+  local limit="$1"
+  shift
+  local donef="$TEST_TEMP_DIR/assert_done.$RANDOM$RANDOM"
+  ( "$@" >/dev/null 2>&1; : > "$donef" ) &
+  local pid=$!
+  local waited=0
+  local max=$((limit * 10))
+  while [[ ! -f "$donef" ]]; do
+    if ((waited >= max)); then
+      kill "$pid" 2>/dev/null
+      wait "$pid" 2>/dev/null
+      rm -f "$donef"
+      return 1
+    fi
+    sleep 0.1
+    ((waited++))
+  done
+  wait "$pid" 2>/dev/null
+  rm -f "$donef"
+  return 0
+}

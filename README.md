@@ -85,9 +85,12 @@ Requires Bash 3.2+, Git 2.13+, `jq`.
 | `gas current` | Show which account is active in the current directory (alias: `whoami`) |
 | `gas apply` | Re-sync all configs (SSH, git, hooks, remotes) system-wide |
 | `gas apply <id\|alias>` | Apply one account to the current repo only |
+| `gas apply --yes` / `--no-prompt` | Same, never pausing for confirmation (CI/scripts) |
 | `gas audit` | Scan repos for identity mismatches |
 | `gas audit --fix` | Same, plus auto-correct what it finds |
 | `gas validate` | Check the config for errors (overlapping workspaces, dup aliases, …) |
+| `gas validate --check-ssh` | Same, also testing SSH connections without prompting |
+| `gas validate --yes` / `--no-prompt` | Assume yes / skip optional checks (CI/scripts) |
 | `gas remove <id>` | Drop an account |
 | `gas version` / `gas help` | Self-explanatory |
 

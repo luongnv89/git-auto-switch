@@ -2,6 +2,32 @@
 # Validate configuration
 
 cmd_validate() {
+  # Optional flags:
+  #   --check-ssh  run the SSH connection test without prompting
+  #   --yes, -y    assume "yes" for optional prompts (runs the SSH test)
+  #   --no-prompt  never prompt; skip optional interactive checks
+  local check_ssh=false
+  local assume_yes=false
+  local no_prompt=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --check-ssh)
+        check_ssh=true
+        ;;
+      --yes|-y)
+        assume_yes=true
+        ;;
+      --no-prompt)
+        no_prompt=true
+        ;;
+      *)
+        die "Unknown option for 'validate': $1 (supported: --check-ssh, --yes, --no-prompt)"
+        ;;
+    esac
+    shift
+  done
+
   # Check if initialized
   if ! load_state; then
     die "Not initialized. Run 'git-auto-switch init' first."
@@ -22,7 +48,7 @@ cmd_validate() {
     log_success "State file is valid"
   else
     log_error "State file has errors"
-    ((errors++))
+    ((errors++)) || true
   fi
 
   local account_count
@@ -30,7 +56,7 @@ cmd_validate() {
 
   if [[ $account_count -eq 0 ]]; then
     log_warn "No accounts configured"
-    ((warnings++))
+    ((warnings++)) || true
     echo
     echo "Validation complete: $errors errors, $warnings warnings"
     return 0
@@ -52,7 +78,7 @@ cmd_validate() {
       log_success "SSH key exists: $expanded_key"
     else
       log_error "SSH key missing: $expanded_key"
-      ((errors++))
+      ((errors++)) || true
     fi
 
     # Check SSH config entry
@@ -60,7 +86,7 @@ cmd_validate() {
       log_success "SSH config entry exists for $ssh_alias"
     else
       log_error "SSH config entry missing for $ssh_alias"
-      ((errors++))
+      ((errors++)) || true
     fi
 
     # Check per-account gitconfig
@@ -69,7 +95,7 @@ cmd_validate() {
       log_success "Git config file exists: $git_config_file"
     else
       log_error "Git config file missing: $git_config_file"
-      ((errors++))
+      ((errors++)) || true
     fi
 
     # Check all workspaces for this account
@@ -84,7 +110,7 @@ cmd_validate() {
         log_success "Workspace exists: $expanded_workspace"
       else
         log_warn "Workspace does not exist: $expanded_workspace"
-        ((warnings++))
+        ((warnings++)) || true
       fi
 
       # Check includeIf entry
@@ -92,12 +118,21 @@ cmd_validate() {
         log_success "Git includeIf entry exists for $workspace"
       else
         log_error "Git includeIf entry missing for $workspace"
-        ((errors++))
+        ((errors++)) || true
       fi
     done
 
-    # Test SSH connection (optional, network dependent)
-    read -rp "  Test SSH connection for $name? [y/N] " test_ssh
+    # Test SSH connection (optional, network dependent). Only prompt on an
+    # interactive terminal: a non-TTY stdin (CI, scripts, </dev/null) skips
+    # the test deterministically unless --check-ssh/--yes opts in.
+    local test_ssh=""
+    if [[ "$check_ssh" == true || "$assume_yes" == true ]]; then
+      test_ssh="y"
+    elif [[ "$no_prompt" == true ]] || [[ ! -t 0 ]]; then
+      log_info "Skipping SSH connection test for $name (non-interactive; pass --check-ssh to run it)"
+    else
+      read -rp "  Test SSH connection for $name? [y/N] " test_ssh
+    fi
     if [[ "$test_ssh" == "y" || "$test_ssh" == "Y" ]]; then
       # Fetch the full account JSON only when the user opts into the SSH test
       local account
@@ -106,7 +141,7 @@ cmd_validate() {
         log_success "SSH connection successful"
       else
         log_error "SSH connection failed"
-        ((errors++))
+        ((errors++)) || true
       fi
     fi
   done
@@ -118,7 +153,7 @@ cmd_validate() {
     log_success "Pre-commit hook is properly configured"
   else
     log_error "Pre-commit hook has issues"
-    ((errors++))
+    ((errors++)) || true
   fi
 
   # Summary
