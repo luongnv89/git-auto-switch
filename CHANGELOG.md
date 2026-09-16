@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deprecated `install.sh` legacy installer shim — install via
   `pip install git-auto-switch`, `npm install -g git-auto-switch`, or
   `install-curl.sh` instead (#30)
+- Dead `validate_git_config` helper in `lib/applicators/git.sh` — zero
+  callers and zero test references; workspace/includeIf validation stays
+  with `gas validate` (#34)
+- Dead `validate_directory` and `is_path_inside` helpers in
+  `lib/core/utils.sh` — zero callers and zero test references (#34)
 
 ### Fixed
 - Unified workspace path canonicalization on `expand_path` so `gas current`,
