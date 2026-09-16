@@ -177,3 +177,17 @@ setup_validate_command() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"Unknown option"* ]]
 }
+
+@test "gas validate </dev/null> still prints the failure summary under set -e" {
+  create_test_state
+  save_state
+
+  # End-to-end through the real entry point: `set -euo pipefail` is only
+  # active there, so a regression to unguarded ((errors++)) would abort the
+  # run before the summary — invisible to the sourced-function tests above.
+  run bash "$PROJECT_ROOT/git-auto-switch" validate </dev/null
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Validation failed:"* ]]
+  [[ "$output" == *"errors,"* ]]
+  [[ "$output" != *"Test SSH connection for"* ]]
+}

@@ -48,7 +48,7 @@ cmd_validate() {
     log_success "State file is valid"
   else
     log_error "State file has errors"
-    ((errors++))
+    ((errors++)) || true
   fi
 
   local account_count
@@ -56,7 +56,7 @@ cmd_validate() {
 
   if [[ $account_count -eq 0 ]]; then
     log_warn "No accounts configured"
-    ((warnings++))
+    ((warnings++)) || true
     echo
     echo "Validation complete: $errors errors, $warnings warnings"
     return 0
@@ -78,7 +78,7 @@ cmd_validate() {
       log_success "SSH key exists: $expanded_key"
     else
       log_error "SSH key missing: $expanded_key"
-      ((errors++))
+      ((errors++)) || true
     fi
 
     # Check SSH config entry
@@ -86,7 +86,7 @@ cmd_validate() {
       log_success "SSH config entry exists for $ssh_alias"
     else
       log_error "SSH config entry missing for $ssh_alias"
-      ((errors++))
+      ((errors++)) || true
     fi
 
     # Check per-account gitconfig
@@ -95,7 +95,7 @@ cmd_validate() {
       log_success "Git config file exists: $git_config_file"
     else
       log_error "Git config file missing: $git_config_file"
-      ((errors++))
+      ((errors++)) || true
     fi
 
     # Check all workspaces for this account
@@ -110,7 +110,7 @@ cmd_validate() {
         log_success "Workspace exists: $expanded_workspace"
       else
         log_warn "Workspace does not exist: $expanded_workspace"
-        ((warnings++))
+        ((warnings++)) || true
       fi
 
       # Check includeIf entry
@@ -118,7 +118,7 @@ cmd_validate() {
         log_success "Git includeIf entry exists for $workspace"
       else
         log_error "Git includeIf entry missing for $workspace"
-        ((errors++))
+        ((errors++)) || true
       fi
     done
 
@@ -141,7 +141,7 @@ cmd_validate() {
         log_success "SSH connection successful"
       else
         log_error "SSH connection failed"
-        ((errors++))
+        ((errors++)) || true
       fi
     fi
   done
@@ -153,7 +153,7 @@ cmd_validate() {
     log_success "Pre-commit hook is properly configured"
   else
     log_error "Pre-commit hook has issues"
-    ((errors++))
+    ((errors++)) || true
   fi
 
   # Summary
