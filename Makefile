@@ -84,7 +84,7 @@ security-scan:
 	@if command -v gitleaks >/dev/null 2>&1; then \
 		gitleaks git --redact .; \
 	elif command -v docker >/dev/null 2>&1; then \
-		docker run --rm -v "$(CURDIR):/repo" "zricethezav/gitleaks:v$(GITLEAKS_VERSION)" git --redact /repo; \
+		docker run --rm --entrypoint sh -v "$(CURDIR):/repo" "zricethezav/gitleaks:v$(GITLEAKS_VERSION)" -c "git config --global --add safe.directory /repo && gitleaks git --redact /repo"; \
 	else \
 		echo "gitleaks not found. Install with: brew install gitleaks (macOS) or see https://github.com/gitleaks/gitleaks#installing"; \
 		exit 1; \
