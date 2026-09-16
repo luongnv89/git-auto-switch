@@ -34,14 +34,6 @@ validate_account_name() {
   [[ "$name" =~ ^[a-zA-Z][a-zA-Z0-9_-]*$ ]]
 }
 
-# Check if directory exists
-validate_directory() {
-  local dir="$1"
-  local expanded
-  expanded=$(expand_path "$dir")
-  [[ -d "$expanded" ]]
-}
-
 # Check if jq is available
 require_jq() {
   if ! command -v jq &>/dev/null; then
@@ -53,18 +45,6 @@ require_jq() {
 generate_id() {
   local label="$1"
   echo "$label" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd 'a-z0-9-'
-}
-
-# Check if path is inside another path
-is_path_inside() {
-  local child="$1"
-  local parent="$2"
-  local child_expanded parent_expanded
-  child_expanded=$(expand_path "$child")
-  parent_expanded=$(expand_path "$parent")
-
-  # Ensure trailing slash for proper prefix matching
-  [[ "${child_expanded}/" == "${parent_expanded}/"* ]]
 }
 
 # Create backup with timestamp
