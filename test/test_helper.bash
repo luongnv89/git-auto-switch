@@ -41,6 +41,14 @@ teardown() {
   fi
 }
 
+# Portable file-mode query: GNU stat (-c, Linux) first, BSD stat (-f,
+# macOS) fallback. Order matters: on GNU, `-f` means --file-system, so
+# `stat -f '%Lp' file` treats the format as an operand and dumps a
+# multi-line filesystem report to stdout before the fallback ever runs.
+file_mode() {
+  stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1"
+}
+
 # Helper to create a test state
 create_test_state() {
   init_state

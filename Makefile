@@ -1,4 +1,4 @@
-.PHONY: all lint test test-docker clean check-deps help install coverage version-check
+.PHONY: all lint test test-docker clean check-deps help install coverage version-check security-scan security-setup
 
 SHELL := /bin/bash
 SCRIPTS := git-auto-switch install-curl.sh lib/bootstrap.sh $(wildcard lib/**/*.sh) $(wildcard scripts/*.sh)
@@ -6,6 +6,10 @@ SCRIPTS := git-auto-switch install-curl.sh lib/bootstrap.sh $(wildcard lib/**/*.
 # Pinned bats version (F-TEST-004): local installs, CI, and the
 # bats/bats image used by `make test-docker` must all agree on this.
 BATS_VERSION ?= 1.14.0
+
+# Pinned gitleaks version: the local `security-scan` docker fallback and
+# the CI security job must agree on this.
+GITLEAKS_VERSION ?= 8.30.1
 
 all: lint test version-check
 
@@ -71,6 +75,24 @@ uninstall-global:
 	@sudo rm -f /usr/local/bin/git-auto-switch /usr/local/bin/gas
 	@echo "Uninstalled!"
 
+## Secret scanning: gitleaks over the full git history. Prefers a local
+## gitleaks install; falls back to the pinned docker image (like
+## test-docker). Exits non-zero on any finding or when neither is
+## available — a security gate must fail closed, never silently skip.
+security-scan:
+	@echo "Running secret scan (gitleaks)..."
+	@if command -v gitleaks >/dev/null 2>&1; then \
+		gitleaks git --redact .; \
+	elif command -v docker >/dev/null 2>&1; then \
+		docker run --rm --entrypoint sh -v "$(CURDIR):/repo" "zricethezav/gitleaks:v$(GITLEAKS_VERSION)" -c "git config --global --add safe.directory /repo && gitleaks git --redact /repo"; \
+	else \
+		echo "gitleaks not found. Install with: brew install gitleaks (macOS) or see https://github.com/gitleaks/gitleaks#installing"; \
+		exit 1; \
+	fi
+
+## Alias for the recorded issue-#32 verify command.
+security-setup: security-scan
+
 ## Cleanup
 clean:
 	@rm -rf test/tmp .bats-run-* .coverage coverage.xml coverage
@@ -99,6 +121,7 @@ help:
 	@echo "  make version-check - Verify all version strings match VERSION"
 	@echo "  make test-docker - Run bats tests in container (no local bats needed)"
 	@echo "  make coverage   - Report coverage (pytest --cov; kcov for bash if installed)"
+	@echo "  make security-scan - Scan git history for secrets (gitleaks)"
 	@echo "  make all        - Run lint, test, and version-check"
 	@echo "  make check-deps - Verify required tools are installed"
 	@echo "  make install    - Install to /usr/local/bin"

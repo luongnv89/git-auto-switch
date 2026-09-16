@@ -91,6 +91,9 @@ The PyPI and npm packages are published manually at release time. CI
 (`.github/workflows/ci.yml`) runs lint and tests on every push and PR —
 there is no automated release workflow yet.
 
+See [SECURITY.md](SECURITY.md) for the full hardening posture, including
+the `make security-scan` secret-scan gate and state-file permissions.
+
 ## Commands
 
 | Command | What it does |
